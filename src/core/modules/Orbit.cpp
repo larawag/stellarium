@@ -521,6 +521,7 @@ void EllipticalOrbit::sample(double, double, int nSamples, OrbitSampleProc& proc
 		proc.sample(positionAtE(dE * i));
 }
 */
+
 /*
  * Stuff found unused and deactivated pre-0.15
 Vec3d CachingOrbit::positionAtTime(double JDE) const

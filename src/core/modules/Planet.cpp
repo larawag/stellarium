@@ -209,13 +209,14 @@ Planet::Planet(const QString& englishName,
 	  outgas_intensity(0.f),
 	  outgas_falloff(0.f),
 	  rotLocalToParent(Mat4d::identity()),
-	  axisRotation(0.),
+	  axisRotation(0.f),
 	  objModel(Q_NULLPTR),
 	  objModelLoader(Q_NULLPTR),
 	  survey(Q_NULLPTR),
 	  rings(Q_NULLPTR),
 	  distance(0.0),
 	  sphereScale(1.f),
+	  distance(0.),
 	  lastJDE(J2000),
 	  coordFunc(coordFunc),
 	  orbitPtr(anOrbitPtr),
@@ -413,7 +414,15 @@ QString Planet::getInfoString(const StelCore* core, const InfoStringGroup& flags
 
 	if (flags&Name)
 	{
-		oss << "<h2>" << getNameI18n();  // UI translation can differ from sky translation		
+		oss << "<h2>";
+		if (englishName=="Pluto")
+		{
+			// We must prepend minor planet number here. Actually Dwarf Planet Pluto is still a "Planet" object in Stellarium...
+			oss << QString("(134340) ");
+		}
+		oss << getNameI18n();  // UI translation can differ from sky translation
+		if (!iauMoonNumber.isEmpty())
+			oss << QString(" (%1)").arg(iauMoonNumber);
 		oss.setRealNumberNotation(QTextStream::FixedNotation);
 		oss.setRealNumberPrecision(1);
 		if (sphereScale != 1.f)
@@ -802,17 +811,23 @@ double Planet::getParentSatellitesFov(const StelCore* core) const
 }
 
 // Set the rotational elements of the planet body.
-void Planet::setRotationElements(float _period, float _offset, double _epoch, float _obliquity, float _ascendingNode, float _precessionRate, double _siderealPeriod )
+void Planet::setRotationElements(const float _period, const float _offset, const double _epoch, const float _obliquity, const float _ascendingNode, const double _ra0, const double _ra1, const double _de0, const double _de1, const double _siderealPeriod)
 {
 	re.period = _period;
 	re.offset = _offset;
 	re.epoch = _epoch;
 	re.obliquity = _obliquity;
 	re.ascendingNode = _ascendingNode;
-	re.precessionRate = _precessionRate;
+	//re.precessionRate = _precessionRate; // pre-0.15
+
+	re.ra0=_ra0;
+	re.ra1=_ra1;
+	re.de0=_de0;
+	re.de1=_de1;
+
 	re.siderealPeriod = _siderealPeriod;  // used for drawing orbit lines
 
-	deltaOrbitJDE = re.siderealPeriod/ORBIT_SEGMENTS;
+	deltaOrbitJDE = re.siderealPeriod/ORBIT_SEGMENTS;                              // <============= REMOVE siderealPeriod FROM RotationalElements!
 }
 
 Vec3d Planet::getJ2000EquatorialPos(const StelCore *core) const
@@ -835,8 +850,12 @@ void Planet::computePositionWithoutOrbits(const double dateJDE)
 }
 
 // return value in radians!
-// For Earth, this is epsilon_A, the angle between earth's rotational axis and mean ecliptic of date.
+// For Earth, this is epsilon_A, the angle between earth's rotational axis and pole of mean ecliptic of date.
 // Details: e.g. Hilton etal, Report on Precession and the Ecliptic, Cel.Mech.Dyn.Astr.94:351-67 (2006), Fig1.
+// GZ notes 2016:
+// For the other planets, it is angle between axis and Normal to the VSOP_J2000 coordinate frame.
+// For moons, it may be the obliquity against its planet's equatorial plane.
+// GZ: Note that such a scheme is highly confusing, and should be avoided.
 double Planet::getRotObliquity(double JDE) const
 {
 	// JDay=2451545.0 for J2000.0
@@ -1068,8 +1087,154 @@ void Planet::computeTransMatrix(double JD, double JDE)
 				rotLocalToParent=rotLocalToParent*nut2000B;
 			}
 		}
+		/*
+		else if (englishName=="Moon")
+		{
+
+		}
+		else if (englishName=="Mercury")
+		{
+
+		}
+		else if (englishName=="Jupiter")
+		{
+
+		}
+		else if (englishName=="Neptune")
+		{
+
+		}
+		else if (englishName=="Phobos")
+		{
+
+		}
+		else if (englishName=="Deimos")
+		{
+
+		}
+		else if (englishName=="Metis")
+		{
+
+		}
+		else if (englishName=="Amalthea")
+		{
+
+		}
+		else if (englishName=="Thebe")
+		{
+
+		}
+		else if (englishName=="Io")
+		{
+
+		}
+		else if (englishName=="Europa")
+		{
+
+		}
+		else if (englishName=="Ganymede")
+		{
+
+		}
+		else if (englishName=="Callisto")
+		{
+
+		}
+		else if (englishName=="Epimetheus")
+		{
+
+		}
+		else if (englishName=="Janus")
+		{
+
+		}
+		else if (englishName=="Mimas")
+		{
+
+		}
+		else if (englishName=="Tethys")
+		{
+
+		}
+		else if (englishName=="Rhea")
+		{
+
+		}
+		else if (englishName=="Cordelia")
+		{
+
+		}
+		else if (englishName=="Ophelia")
+		{
+
+		}
+		else if (englishName=="Bianca")
+		{
+
+		}
+		else if (englishName=="Cressida")
+		{
+
+		}
+		else if (englishName=="Desdemona")
+		{
+
+		}
+		else if (englishName=="Juliet")
+		{
+
+		}
+		else if (englishName=="Portia")
+		{
+
+		}
+		else if (englishName=="Rosalind")
+		{
+
+		}
+		else if (englishName=="Belinda")
+		{
+
+		}
+		else if (englishName=="Puck")
+		{
+
+		}
+		else if (englishName=="Miranda")
+		{
+
+		}
+		else if (englishName=="Ariel")
+		{
+
+		}
+		else if (englishName=="Umbriel")
+		{
+
+		}
+		else if (englishName=="Titania")
+		{
+
+		}
+		else if (englishName=="Oberon")
+		{
+
+		}
+		else if (re.ra0!=0.0)
+		{
+			// New model given: Rotate with those values, but also rotate further ICRF-->VSOP!
+			rotLocalToParent =
+		}
+*/
 		else
-			rotLocalToParent = Mat4d::zrotation(re.ascendingNode - re.precessionRate*(JDE-re.epoch)) * Mat4d::xrotation(re.obliquity);
+		{
+			// 0.15+: This used to be the old solution. Those axes were defined w.r.t. J2000 Ecliptic (VSOP87)
+			// Also here, the preliminary version for Earth's precession was modelled, before the Vondrak2011 model which came in V0.14.
+			// No other Planet had precessionRate defined, so it's safe to remove it here.
+			//rotLocalToParent = Mat4d::zrotation(re.ascendingNode - re.precessionRate*(JDE-re.epoch)) * Mat4d::xrotation(re.obliquity);
+			rotLocalToParent = Mat4d::zrotation(re.ascendingNode) * Mat4d::xrotation(re.obliquity);
+			qDebug() << "Planet" << englishName << ": setting old-style rotLocalToParent.";
+		}
 	}
 }
 
@@ -1096,7 +1261,11 @@ void Planet::setRotEquatorialToVsop87(const Mat4d &m)
 }
 
 
-// Compute the z rotation to use from equatorial to geographic coordinates.
+// GZ TODO: UPDATE THIS DESCRIPTION LINE! Compute the z rotation to use from equatorial to geographic coordinates.
+// V0.15 sidereal time in this context is the rotation angle W of the Prime meridian from the ascending node of the planet equator on the ICRF equator.
+// For Earth (of course) it is sidereal time at Greenwich.
+// The usual model is W=W0+d*W1. Some planets/moons have more complicated rotations though, these should be handled separately in here.
+// TODO: Make sure this is compatible with the old model!
 // We need both JD and JDE here for Earth. (For other planets only JDE.)
 double Planet::getSiderealTime(double JD, double JDE) const
 {
@@ -1199,7 +1368,24 @@ Vec3d Planet::getEclipticPos() const
 	return eclipticPos;
 }
 
-// Return heliocentric coordinate of p
+// Return the heliocentric ecliptical position (Vsop87)
+// GZ NOTE THIS FUNCTION MAY HAVE BEEN REMOVED IN HEAD!
+Vec3d Planet::getHeliocentricEclipticPos() const
+{
+	Vec3d pos = eclipticPos;
+	PlanetP pp = parent;
+	if (pp)
+	{
+		while (pp->parent)
+		{
+			pos += pp->eclipticPos;
+			pp = pp->parent;
+		}
+	}
+	return pos;
+}
+
+// Return heliocentric ecliptical coordinate of p [AU]
 Vec3d Planet::getHeliocentricPos(Vec3d p) const
 {
 	// Note: using shared copies is too slow here.  So we use direct access
@@ -1497,10 +1683,9 @@ float Planet::getVMagnitude(const StelCore* core) const
 
 				break;
 			}
-
 			case ExplanatorySupplement_1992:
 			{
-				// Algorithm provided by Pere Planesas (Observatorio Astronomico Nacional)
+				// Algorithm contributed by Pere Planesas (Observatorio Astronomico Nacional)
 				// GZ2016: Actually, this is taken straight from the Explanatory Supplement to the Astronomical Ephemeris 1992! (chap. 7.12)
 				// The value -8.88 for Saturn V(1,0) seems to be a correction of a typo, where Suppl.Astr. gives -7.19 just like for Uranus.
 				double f1 = phaseDeg/100.;
@@ -2281,7 +2466,17 @@ void Planet::draw3dModel(StelCore* core, StelProjector::ModelViewTranformP trans
 			// Special case for the Moon. Was 1.6, but this often is too bright.
 			light.diffuse = Vec4f(static_cast<float>(fovFactor),static_cast<float>(magFactorGreen*fovFactor),static_cast<float>(magFactorBlue*fovFactor),1.f);
 		}
+/* GZ This may be remains of a "lighting=false" condition that was possible before 0.16.
+ * I think it can be deleted, given that lighting is always true now...
+		else
+		{
+			sPainter->setColor(albedo,magFactorGreen*albedo,magFactorBlue*albedo);
+			// GZ I think this is a bug: If no lighting, we must actively still set the light!
+			light.diffuse = Vec4f(0);
+			light.ambient = Vec4f(albedo,magFactorGreen*albedo,magFactorBlue*albedo);
 
+		}
+*/
 		// possibly tint sun's color from extinction. This should deliberately cause stronger reddening than for the other objects.
 		if (this==ssm->getSun())
 		{
