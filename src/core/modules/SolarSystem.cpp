@@ -1129,7 +1129,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 					       pd.value(secname+"/normals_map", normalMapName).toString(),
 					       pd.value(secname+"/model").toString(),
 					       posfunc,
-					       orbitPtr,
+					       orbitPtr, // This remains NULL for the major planets!
 					       osculatingFunc,
 					       closeOrbit,
 					       hidden,
@@ -1190,7 +1190,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 
 			// qDebug() << "\tCalculated rotational obliquity: " << rotObliquity*180./M_PI << endl;
 			// qDebug() << "\tCalculated rotational ascending node: " << rotAscNode*180./M_PI << endl;
-
+			/*
 			if (J2000NPoleW0 >0)
 			{
 				// this is just another name for offset...
@@ -1202,6 +1202,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 				rotPeriod=360.0/J2000NPoleW1;
 				// qDebug() << "\t" << englishName << ": Calculated rotational speed: " << rotPeriod*180./M_PI << endl;
 			}
+			*/
 		}
 
 		// rot_periode given in hours, or orbit_Period given in days, orbit_visualization_period in days. The latter should have a meaningful default.
@@ -1216,6 +1217,8 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			J2000NPoleRA1,
 			J2000NPoleDE,
 			J2000NPoleDE1,
+			J2000NPoleW0,
+			J2000NPoleW1,
 			pd.value(secname+"/orbit_visualization_period", fabs(pd.value(secname+"/orbit_Period", 1.).toDouble())).toDouble()); // TODO; Get rid of the last parameter!
 
 		if (pd.value(secname+"/rings", 0).toBool()) {
@@ -1280,6 +1283,11 @@ void SolarSystem::computePositions(double dateJDE, PlanetP observerPlanet)
 		{
 			const double light_speed_correction = (p->getHeliocentricEclipticPos()-obsPosJDE).length() * (AU / (SPEED_OF_LIGHT * 86400.));
 			p->computePosition(dateJDE-light_speed_correction);
+			if      (p->englishName=="Moon")    Planet::updatePlanetCorrections(dateJDE-light_speed_correction, 3);
+			else if (p->englishName=="Jupiter") Planet::updatePlanetCorrections(dateJDE-light_speed_correction, 5);
+			else if (p->englishName=="Saturn")  Planet::updatePlanetCorrections(dateJDE-light_speed_correction, 6);
+			else if (p->englishName=="Uranus")  Planet::updatePlanetCorrections(dateJDE-light_speed_correction, 7);
+			else if (p->englishName=="Neptune") Planet::updatePlanetCorrections(dateJDE-light_speed_correction, 8);
 		}
 	}
 	else
@@ -1287,6 +1295,11 @@ void SolarSystem::computePositions(double dateJDE, PlanetP observerPlanet)
 		for (const auto& p : systemPlanets)
 		{
 			p->computePosition(dateJDE);
+			if      (p->englishName=="Moon")    Planet::updatePlanetCorrections(dateJDE, 3);
+			else if (p->englishName=="Jupiter") Planet::updatePlanetCorrections(dateJDE, 5);
+			else if (p->englishName=="Saturn")  Planet::updatePlanetCorrections(dateJDE, 6);
+			else if (p->englishName=="Uranus")  Planet::updatePlanetCorrections(dateJDE, 7);
+			else if (p->englishName=="Neptune") Planet::updatePlanetCorrections(dateJDE, 8);
 		}
 		lightTimeSunPosition.set(0.,0.,0.);
 	}
@@ -1803,6 +1816,7 @@ void SolarSystem::update(double deltaTime)
 bool SolarSystem::nearLunarEclipse() const
 {
 	// TODO: could replace with simpler test
+	// TODO Source?
 
 	Vec3d e = getEarth()->getEclipticPos();
 	Vec3d m = getMoon()->getEclipticPos();  // relative to earth
@@ -1814,11 +1828,11 @@ bool SolarSystem::nearLunarEclipse() const
 	Vec3d shadow = en * (e.length() + m.length());
 
 	// find shadow radii in AU
-	double r_penumbra = shadow.length()*702378.1/AU/e.length() - 696000/AU;
+	double r_penumbra = shadow.length()*702378.1/AU/e.length() - 696000./AU;
 
 	// modify shadow location for scaled moon
 	Vec3d mdist = shadow - mh;
-	if(mdist.length() > r_penumbra + 2000/AU) return false;   // not visible so don't bother drawing
+	if(mdist.length() > r_penumbra + 2000./AU) return false;   // not visible so don't bother drawing
 
 	return true;
 }

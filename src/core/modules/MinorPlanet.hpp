@@ -102,7 +102,9 @@ public:
 	//! These are the parameters in the IAU's two-parameter magnitude system
 	//! for minor planets. They are used to calculate the apparent magnitude at
 	//! different phase angles.
-	void setAbsoluteMagnitudeAndSlope(const float magnitude, const float slope);
+	//! @param magnitude Absolute magnitude H
+	//! @param slope Slope parameter G. This is usually [0..1], sometimes slightly outside. Allowed here [-1..2].
+	void setAbsoluteMagnitudeAndSlope(const double magnitude, const double slope);
 
 	//! renders the subscript in a minor planet provisional designation with HTML.
 	//! \returns an emtpy string if the source string is not a provisional
