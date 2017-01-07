@@ -87,7 +87,7 @@ Comet::Comet(const QString& englishName,
 		  true, //halo
 		  pTypeStr),
 	  slopeParameter(-10.f), // -10 == uninitialized: used in getVMagnitude() TODO: CHECK AFTER REBASE!
-	  semiMajorAxis(0.),
+	  semiMajorAxis(0.),     // TODO: CHECK AFTER REBASE!
 	  isCometFragment(false),
 	  nameIsProvisionalDesignation(false),
 	  tailFactors(-1., -1.), // mark "invalid"
@@ -163,9 +163,9 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	if (flags&ObjectType && getPlanetType()!=isUNDEFINED)
 	{
 		QString cometType = qc_("non-periodic", "type of comet");
-		if (semiMajorAxis>0.0)
+		if (((CometOrbit *)userDataPtr)->getEccentricity() != 1.0)
 		{
-			// Parabolic and hyperbolic comets doesn't have semi-major axis of the orbit. We have comet with elliptic orbit.
+			// Parabolic and hyperbolic comets don't have semi-major axis of the orbit. We have comet with elliptic orbit.
 			cometType = qc_("periodic", "type of comet");
 		}
 		oss << QString("%1: <b>%2</b> (%3)").arg(q_("Type"), q_(getPlanetTypeString()), cometType) << "<br />";
@@ -333,13 +333,8 @@ void Comet::setSemiMajorAxis(const double value)
 
 double Comet::getSiderealPeriod() const
 {
-	double period;
-	if (semiMajorAxis>0)
-		period = StelUtils::calculateSiderealPeriod(semiMajorAxis);
-	else
-		period = 0;
-
-	return period;
+	double semiMajorAxis=((CometOrbit*)userDataPtr)->getSemimajorAxis();
+	return ((semiMajorAxis>0) ? StelUtils::calculateSiderealPeriod(semiMajorAxis) : 0.);
 }
 
 float Comet::getVMagnitude(const StelCore* core) const
@@ -386,6 +381,7 @@ void Comet::update(int deltaTime)
 	if (!orbit->objectDateValid(dateJDE)) return; // don't do anything if out of useful date range. This allows having hundreds of comet elements.
 
 	//GZ: I think we can make deltaJDtail adaptive, depending on distance to sun! For some reason though, this leads to a crash!
+	// TODO: Make sure it still crashes after REBASE
 	//deltaJDtail=StelCore::JD_SECOND * qBound(1.0, eclipticPos.length(), 20.0);
 
 	if (fabs(lastJDEtail-dateJDE)>deltaJDEtail)

@@ -656,15 +656,20 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 		posFuncType posfunc=Q_NULLPTR;
 		void* orbitPtr=Q_NULLPTR;
 		OsculatingFunctType *osculatingFunc = Q_NULLPTR;
-		bool closeOrbit = pd.value(secname+"/closeOrbit", true).toBool();
+		bool closeOrbit = true; //  = pd.value(secname+"/closeOrbit", true).toBool();   2017: THIS ENTRY NO LONGER EXISTS!
+		double semi_major_axis; // used again below.
 
-		if (coordFuncName=="ell_orbit")
+		if (coordFuncName=="ell_orbit") // used for planet moons.
 		{
 			// GZ TODO: It seems ell_orbit is only used for planet moons. Just assert eccentricity<1 and remove a few extra calculations?
 			// Read the orbital elements
 			const double epoch = pd.value(secname+"/orbit_Epoch",J2000).toDouble();
 			const double eccentricity = pd.value(secname+"/orbit_Eccentricity", 0.0).toDouble();
-			if (eccentricity >= 1.0) closeOrbit = false;
+			if (eccentricity >= 1.0)
+			{
+				closeOrbit = false;
+				qWarning() << "SolarSystem::loadPlanets() Planet moon" << englishName << "with eccentricity >=1 found. This is obviously a data error.";
+			}
 			double pericenterDistance = pd.value(secname+"/orbit_PericenterDistance",-1e100).toDouble();
 			double semi_major_axis;
 			if (pericenterDistance <= 0.0) {
@@ -757,7 +762,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			orbitPtr = orb;
 			posfunc = &ellipticalOrbitPosFunc;
 		}
-		else if (coordFuncName=="comet_orbit")
+		else if (coordFuncName=="comet_orbit") // used for minor planets and comets, in orbit around the sun!
 		{
 			// Read the orbital elements
 			// orbit_PericenterDistance,orbit_SemiMajorAxis: given in AU
@@ -768,7 +773,6 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			const double eccentricity = pd.value(secname+"/orbit_Eccentricity",0.0).toDouble();
 			if (eccentricity >= 1.0) closeOrbit = false;
 			double pericenterDistance = pd.value(secname+"/orbit_PericenterDistance",-1e100).toDouble();
-			double semi_major_axis;
 			if (pericenterDistance <= 0.0) {
 				semi_major_axis = pd.value(secname+"/orbit_SemiMajorAxis",-1e100).toDouble();
 				if (semi_major_axis <= -1e100) {
@@ -833,20 +837,20 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			const double parentRotObliquity = parent->getParent() ? parent->getRotObliquity(2451545.0) : 0.0;
 			const double parent_rot_asc_node = parent->getParent() ? parent->getRotAscendingNode() : 0.0;
 			double parent_rot_j2000_longitude = 0.0;
-						if (parent->getParent()) {
-							qDebug() << "Really? A comet orbiting " << pd.value("parent") << "has a greatparent?";
-							const double c_obl = cos(parentRotObliquity);
-							const double s_obl = sin(parentRotObliquity);
-							const double c_nod = cos(parent_rot_asc_node);
-							const double s_nod = sin(parent_rot_asc_node);
-							const Vec3d OrbitAxis0( c_nod,       s_nod,        0.0);
-							const Vec3d OrbitAxis1(-s_nod*c_obl, c_nod*c_obl,s_obl);
-							const Vec3d OrbitPole(  s_nod*s_obl,-c_nod*s_obl,c_obl);
-							const Vec3d J2000Pole(StelCore::matJ2000ToVsop87.multiplyWithoutTranslation(Vec3d(0,0,1)));
-							Vec3d J2000NodeOrigin(J2000Pole^OrbitPole);
-							J2000NodeOrigin.normalize();
-							parent_rot_j2000_longitude = atan2(J2000NodeOrigin*OrbitAxis1,J2000NodeOrigin*OrbitAxis0);
-						}
+			if (parent->getParent()) {
+				qDebug() << "Really? A comet orbiting " << pd.value("parent") << "has a greatparent?";
+				const double c_obl = cos(parentRotObliquity);
+				const double s_obl = sin(parentRotObliquity);
+				const double c_nod = cos(parent_rot_asc_node);
+				const double s_nod = sin(parent_rot_asc_node);
+				const Vec3d OrbitAxis0( c_nod,       s_nod,        0.0);
+				const Vec3d OrbitAxis1(-s_nod*c_obl, c_nod*c_obl,s_obl);
+				const Vec3d OrbitPole(  s_nod*s_obl,-c_nod*s_obl,c_obl);
+				const Vec3d J2000Pole(StelCore::matJ2000ToVsop87.multiplyWithoutTranslation(Vec3d(0,0,1)));
+				Vec3d J2000NodeOrigin(J2000Pole^OrbitPole);
+				J2000NodeOrigin.normalize();
+				parent_rot_j2000_longitude = atan2(J2000NodeOrigin*OrbitAxis1,J2000NodeOrigin*OrbitAxis0);
+			}
 			//qDebug() << "Creating CometOrbit for" << englishName;
 			CometOrbit *orb = new CometOrbit(pericenterDistance,
 							 eccentricity,
@@ -889,7 +893,6 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			posfunc = &get_mars_helio_coordsv;
 			osculatingFunc = &get_mars_helio_osculating_coords;
 		}
-
 
 		else if (coordFuncName=="phobos_special")
 			posfunc = &get_phobos_parent_coordsv;
@@ -977,9 +980,6 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			qCritical() << "ERROR in section " << secname << ": can't find posfunc " << coordFuncName << " for " << englishName;
 			exit(-1);
 		}
-//		if (axisFuncName=="mercury_special"){
-//			//axisFunc =
-//		}
 
 		// Create the Solar System body and add it to the list
 		QString type = pd.value(secname+"/type").toString();
@@ -1018,7 +1018,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 						    pd.value(secname+"/normals_map", normalMapName).toString(),
 						    pd.value(secname+"/model").toString(),
 						    posfunc,
-						    orbitPtr,
+						    orbitPtr, // the CometOrbit object created previously
 						    osculatingFunc,
 						    closeOrbit,
 						    hidden,
@@ -1055,9 +1055,11 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 				}
 			}
 
+			// GZ TODO after rebase: Do we still need to set semimajor axis? Only the orbit needs to know this!
 			mp->setSemiMajorAxis(pd.value(secname+"/orbit_SemiMajorAxis", 0).toDouble());
 			mp->setColorIndexBV(bV);
 			mp->setSpectralType(pd.value(secname+"/spec_t", "").toString(), pd.value(secname+"/spec_b", "").toString());
+			mp->deltaJDE = 2.0*semi_major_axis*StelCore::JD_SECOND;
 
 			systemMinorBodies.push_back(p);
 		}
@@ -1075,8 +1077,8 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 					      pd.value(secname+"/tex_map", "nomap.png").toString(),
 					      pd.value(secname+"/model").toString(),
 					      posfunc,
-					      orbitPtr,
-					      osculatingFunc,
+					      orbitPtr, // the CometOrbit object
+					      osculatingFunc, // ALWAYS NULL for comets.
 					      closeOrbit,
 					      pd.value(secname+"/hidden", false).toBool(),
 					      type,
@@ -1102,6 +1104,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 				}
 			}
 
+			// GZ TODO after rebase: Check if Comet needs to know its semimajor axis. Only its Orbit needs to know anything about this.
 			const double eccentricity = pd.value(secname+"/orbit_Eccentricity",0.0).toDouble();
 			const double pericenterDistance = pd.value(secname+"/orbit_PericenterDistance",-1e100).toDouble();
 			if (eccentricity<1 && pericenterDistance>0)
@@ -1110,7 +1113,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			}
 			systemMinorBodies.push_back(p);
 		}
-		else
+		else // type==star|planet|moon|
 		{
 			// Set possible default name of the normal map for avoiding yin-yang shaped moon
 			// phase when normal map key not exists. Example: moon_normals.png
@@ -1129,7 +1132,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 					       pd.value(secname+"/normals_map", normalMapName).toString(),
 					       pd.value(secname+"/model").toString(),
 					       posfunc,
-					       orbitPtr, // This remains NULL for the major planets!
+					       orbitPtr, // This remains NULL for the major planets, or has an EllipticalOrbit for planet moons.
 					       osculatingFunc,
 					       closeOrbit,
 					       hidden,

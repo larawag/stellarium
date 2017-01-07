@@ -104,7 +104,7 @@ public:
 //	float precessionRate;  // rate of precession of rotation axis in [rads/JulianCentury(36525d)] [ NO LONGER USED WITH 0.14 (was used for Earth only, and that was too simple.) ]
 	double siderealPeriod; // sidereal period (Planet year or a moon's sidereal month) [earth days]
 	// GZ for 0.19: I propose changes here: The 6 new entries after the switch are enough for many objects. Else, design special_functions.
-	bool useICRF;          // Use values w.r.t. ICRF (should ultimately be true for all objects!) This can be set when rot_pole_w0 is given. Updating the axis is required if ra1<>0
+	bool useICRF;          // Use values w.r.t. ICRF (should ultimately be true for all objects!) This can be set when rot_pole_ra1 or w0(?) is given. Updating the axis is required if ra1<>0
 	double ra0;            // [rad] RA_0 right ascension of north pole. ssystem.ini: rot_pole_ra    /180*M_PI
 	double ra1;            // [rad/century] rate of change in axis ra   ssystem.ini: rot_pole_ra1   /180*M_PI
 	double de0;            // [rad] DE_0 declination of north pole      ssystem.ini: rot_pole_de    /180*M_PI
@@ -309,7 +309,7 @@ public:
 	void setRotEquatorialToVsop87(const Mat4d &m);
 
 	const RotationElements &getRotationElements(void) const {return re;}
-// OLD HEAD VERSION
+// OLD HEAD VERSION. TODO: Check after Rebase!
 	// Set the orbital elements
 //	void setRotationElements(float _period, float _offset, double _epoch,
 //				 float _obliquity, float _ascendingNode,
@@ -357,7 +357,7 @@ public:
 	double getElongation(const Vec3d& obsPos) const;
 	//! Get the angular radius (degrees) of the spheroid of the planet (i.e. without the rings)
 	double getSpheroidAngularSize(const StelCore* core) const;
-	//! Get the planet phase (illuminated fraction of the planet disk, 0..1) for an observer at pos obsPos in heliocentric coordinates (in AU)
+	//! Get the planet phase (illuminated fraction of the planet disk, [0=dark..1=full]) for an observer at pos obsPos in heliocentric coordinates (in AU)
 	float getPhase(const Vec3d& obsPos) const;
 
 	//! Get the Planet position in the parent Planet ecliptic coordinate in AU

@@ -137,7 +137,7 @@ private:
 	void computeParabola(const float parameter, const float topradius, const float zshift, QVector<Vec3d>& vertexArr, QVector<float>& texCoordArr, QVector<unsigned short>& indices, const float xOffset=0.0f);
 
 	float slopeParameter;
-	double semiMajorAxis;
+	//double semiMajorAxis;
 	bool isCometFragment;
 	bool nameIsProvisionalDesignation;
 
