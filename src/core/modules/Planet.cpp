@@ -864,7 +864,7 @@ void Planet::computePositionWithoutOrbits(const double dateJDE)
 // return value in radians!
 // For Earth, this is epsilon_A, the angle between earth's rotational axis and pole of mean ecliptic of date.
 // Details: e.g. Hilton etal, Report on Precession and the Ecliptic, Cel.Mech.Dyn.Astr.94:351-67 (2006), Fig1.
-// GZ notes 2017:
+// GZ notes  2017:
 // For the other planets, it must be the angle between axis and Normal to the VSOP_J2000 coordinate frame.
 // For moons, it may be the obliquity against its planet's equatorial plane.
 // GZ: Note that such a scheme is highly confusing, and should be avoided. IAU models use the J2000 frame.
