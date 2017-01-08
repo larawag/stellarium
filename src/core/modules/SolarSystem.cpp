@@ -999,7 +999,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			Vec3f color = Vec3f(1.f, 1.f, 1.f);
 			float bV = pd.value(secname+"/color_index_bv", 99.f).toFloat();
 			if (bV<99.f)
-				color = skyDrawer->indexToColor(BvToColorIndex(bV))*0.75f;
+				color = skyDrawer->indexToColor(BvToColorIndex(bV)); // color should have at least 1 element==1.
 			else
 				color = StelUtils::strToVec3f(pd.value(secname+"/color", "1.0,1.0,1.0").toString());
 
@@ -1070,7 +1070,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 					      pd.value(secname+"/radius", 1.0).toDouble()/AU,
 					      pd.value(secname+"/oblateness", 0.0).toDouble(),
 					      StelUtils::strToVec3f(pd.value(secname+"/color", "1.0,1.0,1.0").toString()), // halo color
-					      pd.value(secname+"/albedo", 0.25f).toFloat(),
+					      pd.value(secname+"/albedo", 0.075f).toFloat(), // assume very dark surface
 					      pd.value(secname+"/roughness",0.9f).toFloat(),
 					      pd.value(secname+"/outgas_intensity",0.1f).toFloat(),
 					      pd.value(secname+"/outgas_falloff", 0.1f).toFloat(),
@@ -1170,8 +1170,8 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 		double J2000NPoleRA1 = pd.value(secname+"/rot_pole_ra1", 0.).toDouble()*M_PI/180.;
 		double J2000NPoleDE  = pd.value(secname+"/rot_pole_de", 0.).toDouble()*M_PI/180.;
 		double J2000NPoleDE1 = pd.value(secname+"/rot_pole_de1", 0.).toDouble()*M_PI/180.;
-		double J2000NPoleW0  = pd.value(secname+"/rot_pole_w0", 0.).toDouble()*M_PI/180.;
-		double J2000NPoleW1  = pd.value(secname+"/rot_pole_w1", 0.).toDouble()*M_PI/180.;
+		double J2000NPoleW0  = pd.value(secname+"/rot_pole_w0", 0.).toDouble(); // stays in degrees!
+		double J2000NPoleW1  = pd.value(secname+"/rot_pole_w1", 0.).toDouble(); // stays in degrees!
 
 		double rotPeriod=pd.value(secname+"/rot_periode", pd.value(secname+"/orbit_Period", 24.).toDouble()).toDouble()/24.;
 		double rotOffset=pd.value(secname+"/rot_rotation_offset",0.).toDouble();
