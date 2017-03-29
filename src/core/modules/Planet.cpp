@@ -90,7 +90,7 @@ StelTextureSP Planet::texEarthShadow;
 bool Planet::permanentDrawingOrbits = false;
 Planet::PlanetOrbitColorStyle Planet::orbitColorStyle = Planet::ocsOneColor;
 
-// TBD: Maybe include the GRS corrections to the planetCorrections?
+// TODO: Maybe include the GRS corrections to the planetCorrections?
 bool Planet::flagCustomGrsSettings = false;
 double Planet::customGrsJD = 2456901.5;
 double Planet::customGrsDrift = 15.;
