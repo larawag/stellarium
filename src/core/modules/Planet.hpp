@@ -112,6 +112,9 @@ public:
 	// These values are only in the modern algorithms. invalid if W0=0.
 	double W0;             // [deg] mean longitude of prime meridian along equator measured from intersection with ICRS plane at epoch.
 	double W1;             // [deg/d] mean longitude motion. W=W0+d*W1.
+	double currentAxisRA;  // Mostly debug aid (infostring during development). Usual model RA=RA0+d*RA1(+corrections)
+	double currentAxisDE;  // Mostly debug aid (infostring during development). Usual model DE=DE0+d*DE1(+corrections)
+	double currentAxisW;   // Mostly debug aid (infostring during development). Usual model W =W0+d*W1(+corrections)
 };
 
 // Class to manage rings for planets like saturn
@@ -177,6 +180,16 @@ public:
 		ExplanatorySupplement_2013, // Explanatory Supplement to the Astronomical Almanac, 3rd edition 2013
 		UndefinedAlgorithm,
 		Generic                     // Visual magnitude based on phase angle and albedo. The formula source for this is totally unknown!
+	};
+
+	enum PlanetCorrection		// To be used as named argument for correction calculations regarding orientations of planetary axes.
+	{				// See updatePlanetCorrections()
+		EarthMoon=3,
+		//Mars=4,
+		Jupiter=5,
+		Saturn=6,
+		Uranus=7,
+		Neptune=8
 	};
 
 
@@ -309,7 +322,7 @@ public:
 	void setRotEquatorialToVsop87(const Mat4d &m);
 
 	const RotationElements &getRotationElements(void) const {return re;}
-// OLD HEAD VERSION. TODO: Check after Rebase!
+// OLD HEAD VERSION.
 	// Set the orbital elements
 //	void setRotationElements(float _period, float _offset, double _epoch,
 //				 float _obliquity, float _ascendingNode,
@@ -335,13 +348,15 @@ public:
 				 const double _w1,
 				 //float _precessionRate,
 				 const double _siderealPeriod);
-	double getRotAscendingnode(void) const {return static_cast<double>(re.ascendingNode);}
+	double getRotAscendingNode(void) const {return static_cast<double>(re.ascendingNode);}
 	// return angle between axis and normal of ecliptic plane (or, for a moon, equatorial/reference plane defined by parent).
 	// For Earth, this is the angle between axis and normal to current ecliptic of date, i.e. the ecliptic obliquity of date JDE.
 	// TODO: decide if this is always angle between axis and J2000 ecliptic, or should be axis//current ecliptic!
 	double getRotObliquity(double JDE) const;
 
-
+	// (mostly) Debug aids for Axis Orientation
+	double getCurrentAxisRA(void) const {return re.currentAxisRA; }
+	double getCurrentAxisDE(void) const {return re.currentAxisDE; }
 
 
 	//! Compute the position in the parent Planet coordinate system
@@ -361,7 +376,7 @@ public:
 	//! Get the planet phase (illuminated fraction of the planet disk, [0=dark..1=full]) for an observer at pos obsPos in heliocentric coordinates (in AU)
 	float getPhase(const Vec3d& obsPos) const;
 
-	//! Get the Planet position in the parent Planet ecliptic coordinate in AU
+	//! Get the Planet position in rectangular ecliptic coordinates (J2000) in AU, centered on the parent Planet
 	Vec3d getEclipticPos() const;
 
 	//! Return the heliocentric ecliptical position
@@ -632,9 +647,7 @@ protected:
 	double lastJDE;                  // caches JDE of last positional computation
 	// The callback for the calculation of the equatorial rect heliocentric position at time JDE.
 	posFuncType coordFunc;
-	void* orbitPtr;               // this is always used with an Orbit object.
-// This was the old name. TODO after rebase: delete?
-// 	void* userDataPtr;               // this is always set to an Orbit object usable for positional computations. For the major planets, it is NULL.
+	void* orbitPtr;               // this is always used with an Orbit object, usable for positional computations. For the major planets, it is NULL.
 
 	OsculatingFunctType *const osculatingFunc;
 	QSharedPointer<Planet> parent;           // Planet parent i.e. sun for earth
@@ -707,16 +720,16 @@ protected:
 		double S4;
 		double S5;
 		double S6;
-		//double U1; // corrective terms for Uranus's moons, Table 10.14.
-		//double U2;
-		//double U3;
-		//double U4;
-		//double U5;
-		//double U6;
-		//double U7;
-		//double U8;
-		//double U9;
-		//double U10;
+		double U1; // for Cordelia // corrective terms for Uranus's moons, Table 10.14.
+		double U2; // for Ophelia
+		//double U3; // for Bianca   (not in 0.18)
+		double U4; // for Cressida
+		double U5; // for Desdemona
+		double U6; // for Juliet
+		//double U7; // for Portia   (not in 0.18)
+		//double U8; // for Rosalind (not in 0.18)
+		//double U9; // for Belinda  (not in 0.18)
+		//double U10; // for Puck    (not in 0.18)
 		double U11;
 		double U12;
 		double U13;
@@ -734,7 +747,7 @@ protected:
 	static PlanetCorrections planetCorrections;
 	// Update the planet corrections. planet=3(Moon), 5(Jupiter), 6(Saturn), 7(Uranus), 8(Neptune).
 	// The values are immediately converted to radians.
-	static void updatePlanetCorrections(const double JDE, const int planet);
+	static void updatePlanetCorrections(const double JDE, const PlanetCorrection planet);
 
 private:
 	QString iauMoonNumber;

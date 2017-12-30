@@ -76,6 +76,7 @@ private:
 };
 
 
+// This class could be renamed to KeplerOrbit, and maybe recombined with Elliptical orbit.
 class CometOrbit : public Orbit {
 public:
 	CometOrbit(double pericenterDistance,
@@ -99,7 +100,7 @@ public:
 	//! return speed value [AU/d] last computed by positionAtTimevInVSOP87Coordinates(JDE, v, true)
 	Vec3d getVelocity() const { return rdot; }
 	void getVelocity(double *vel) const { vel[0]=rdot[0]; vel[1]=rdot[1]; vel[2]=rdot[2];}
-	double getSemimajorAxis() const { return (e==1. ? 0. : q / (1.-e)); }
+	double getSemimajorAxis() const { return (e==1. ? 0. : q / (1.-e)); } //! Returns semimajor axis [AU] for elliptic orbit, 0 for a parabolic orbit, and a negative value for hyperbolic orbit.
 	double getEccentricity() const { return e; }
 	bool objectDateValid(const double JDE) const { return (fabs(t0-JDE)<orbitGood); }
 

@@ -86,8 +86,7 @@ Comet::Comet(const QString& englishName,
 		  false, //No atmosphere
 		  true, //halo
 		  pTypeStr),
-	  slopeParameter(-10.f), // -10 == uninitialized: used in getVMagnitude() TODO: CHECK AFTER REBASE!
-	  semiMajorAxis(0.),     // TODO: CHECK AFTER REBASE!
+	  slopeParameter(-10.f), // -10 == uninitialized: used in getVMagnitude()
 	  isCometFragment(false),
 	  nameIsProvisionalDesignation(false),
 	  tailFactors(-1., -1.), // mark "invalid"
@@ -163,7 +162,7 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	if (flags&ObjectType && getPlanetType()!=isUNDEFINED)
 	{
 		QString cometType = qc_("non-periodic", "type of comet");
-		if (((CometOrbit *)userDataPtr)->getEccentricity() != 1.0)
+		if (((CometOrbit *)orbitPtr)->getEccentricity() != 1.0)
 		{
 			// Parabolic and hyperbolic comets don't have semi-major axis of the orbit. We have comet with elliptic orbit.
 			cometType = qc_("periodic", "type of comet");
@@ -329,7 +328,7 @@ QVariantMap Comet::getInfoMap(const StelCore *core) const
 
 double Comet::getSiderealPeriod() const
 {
-	double semiMajorAxis=((CometOrbit*)userDataPtr)->getSemimajorAxis();
+	double semiMajorAxis=((CometOrbit*)orbitPtr)->getSemimajorAxis();
 	return ((semiMajorAxis>0) ? StelUtils::calculateSiderealPeriod(semiMajorAxis) : 0.);
 }
 
@@ -437,7 +436,7 @@ void Comet::update(int deltaTime)
 	const bool withAtmosphere=(core->getSkyDrawer()->getFlagHasAtmosphere());
 
 	StelToneReproducer* eye = core->getToneReproducer();
-	const float lum = core->getSkyDrawer()->surfacebrightnessToLuminance(getVMagnitude(core)+13.0f); // How to calibrate?
+	const float lum = core->getSkyDrawer()->surfaceBrightnessToLuminance(getVMagnitude(core)+13.0f); // How to calibrate?
 	// Get the luminance scaled between 0 and 1
 	float aLum =eye->adaptLuminanceScaled(lum);
 
