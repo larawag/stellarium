@@ -476,7 +476,7 @@ QString Planet::getInfoString(const StelCore* core, const InfoStringGroup& flags
 		oss << QString("%1 XYZ (%2): %3/%4/%5").arg(qc_("Ecliptical","coordinates")).arg(algoName).arg(QString::number(eclPos[0], 'f', 7), QString::number(eclPos[1], 'f', 7), QString::number(eclPos[2], 'f', 7)) << "<br>";
 	}
 
-		oss << q_("DEBUG: Sidereal Time (angle W): %1°").arg(QString::number(getSiderealTime(core->getJD(), core->getJDE()), 'f', 3)) << "<br>";
+		oss << q_("DEBUG: Sidereal Time of Prime Meridian (angle W): %1°").arg(QString::number(getSiderealTime(core->getJD(), core->getJDE()), 'f', 3)) << "<br>";
 		oss << q_("DEBUG: Axis (RA/Dec): %1/%2").arg(StelUtils::radToDmsStr(getCurrentAxisRA(), true), StelUtils::radToDmsStr(getCurrentAxisDE(), true)) << "<br>";
 		oss << q_("DEBUG: RotObliquity: %1").arg(StelUtils::radToDmsStr(re.obliquity, true)) << "<br>";
 	}
