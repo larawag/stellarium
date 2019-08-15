@@ -1159,37 +1159,37 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 		if (secname=="sun") sun = p;
 		if (secname=="moon") moon = p;
 
-		float rotObliquity = pd.value(secname+"/rot_obliquity",0.).toFloat()*(M_PI_180f);
-		float rotAscNode = pd.value(secname+"/rot_equator_ascending_node",0.).toFloat()*(M_PI_180f);
+		double rotObliquity = pd.value(secname+"/rot_obliquity",0.).toDouble()*(M_PI_180);
+		double rotAscNode = pd.value(secname+"/rot_equator_ascending_node",0.).toDouble()*(M_PI_180);
 
 		// Use more common planet North pole data if available
 		// NB: N pole as defined by IAU (NOT right hand rotation rule)
 		// NB: J2000 epoch
 		// GZ TODO for 0.20: Make this more flexible with changing axes. and have special functions for more complicated axes.
-		double J2000NPoleRA  = pd.value(secname+"/rot_pole_ra", 0.).toDouble()*M_PI/180.;
-		double J2000NPoleRA1 = pd.value(secname+"/rot_pole_ra1", 0.).toDouble()*M_PI/180.;
-		double J2000NPoleDE  = pd.value(secname+"/rot_pole_de", 0.).toDouble()*M_PI/180.;
-		double J2000NPoleDE1 = pd.value(secname+"/rot_pole_de1", 0.).toDouble()*M_PI/180.;
-		double J2000NPoleW0  = pd.value(secname+"/rot_pole_w0", 0.).toDouble(); // stays in degrees!
-		double J2000NPoleW1  = pd.value(secname+"/rot_pole_w1", 0.).toDouble(); // stays in degrees!
+		const double J2000NPoleRA  = pd.value(secname+"/rot_pole_ra",  0.).toDouble()*M_PI_180;
+		const double J2000NPoleRA1 = pd.value(secname+"/rot_pole_ra1", 0.).toDouble()*M_PI_180;
+		const double J2000NPoleDE  = pd.value(secname+"/rot_pole_de",  0.).toDouble()*M_PI_180;
+		const double J2000NPoleDE1 = pd.value(secname+"/rot_pole_de1", 0.).toDouble()*M_PI_180;
+		const double J2000NPoleW0  = pd.value(secname+"/rot_pole_w0",  0.).toDouble(); // stays in degrees!
+		const double J2000NPoleW1  = pd.value(secname+"/rot_pole_w1",  0.).toDouble(); // stays in degrees!
 
-		double rotPeriod=pd.value(secname+"/rot_periode", pd.value(secname+"/orbit_Period", 24.).toDouble()).toDouble()/24.;
-		double rotOffset=pd.value(secname+"/rot_rotation_offset",0.).toDouble();
+		const double rotPeriod=pd.value(secname+"/rot_periode", pd.value(secname+"/orbit_Period", 24.).toDouble()).toDouble()/24.;
+		const double rotOffset=pd.value(secname+"/rot_rotation_offset",0.).toDouble();
 
 		if(J2000NPoleRA || J2000NPoleDE)
 		{
 			// Old solution: Make this once for J2000.
-			// New in 0.18: Repeat this block in planet::update() if required.
+			// New in 0.20: Repeat this block in planet::update() if required.
 			Vec3d J2000NPole;
 			StelUtils::spheToRect(J2000NPoleRA,J2000NPoleDE,J2000NPole);
 
 			Vec3d vsop87Pole(StelCore::matJ2000ToVsop87.multiplyWithoutTranslation(J2000NPole));
 
-			float ra, de;
+			double ra, de;
 			StelUtils::rectToSphe(&ra, &de, vsop87Pole);
 
-			rotObliquity = (M_PI_2f - de);
-			rotAscNode = (ra + M_PI_2f);
+			rotObliquity = (M_PI_2 - de);
+			rotAscNode = (ra + M_PI_2);
 
 			// qDebug() << "\tCalculated rotational obliquity: " << rotObliquity*180./M_PI << endl;
 			// qDebug() << "\tCalculated rotational ascending node: " << rotAscNode*180./M_PI << endl;
