@@ -60,7 +60,7 @@ public:
 	      float dustTailBrightnessFact=1.5f
 	);
 
-	virtual ~Comet();
+	virtual ~Comet() Q_DECL_OVERRIDE;
 
 	//Inherited from StelObject via Planet
 	//! Get a string with data about the Comet.
@@ -75,22 +75,22 @@ public:
 	//! \param core the StelCore object
 	//! \param flags a set of InfoStringGroup items to include in the return value.
 	//! \return a QString containing an HMTL encoded description of the Comet.
-	virtual QString getInfoString(const StelCore *core, const InfoStringGroup &flags) const;
+	virtual QString getInfoString(const StelCore *core, const InfoStringGroup &flags) const Q_DECL_OVERRIDE;
 	//! In addition to Planet::getInfoMap(), Comets provides estimates for
 	//! - tail-length-km
 	//! - coma-diameter-km
 	//! using the formula from Guide found by the GSoC2012 initiative at http://www.projectpluto.com/update7b.htm#comet_tail_formula
-	virtual QVariantMap getInfoMap(const StelCore *core) const;
+	virtual QVariantMap getInfoMap(const StelCore *core) const Q_DECL_OVERRIDE;
 	//The Comet class inherits the "Planet" type because the SolarSystem class
 	//was not designed to handle different types of objects.
 	//virtual QString getType() const {return "Comet";}
 	//! \todo Find better sources for the g,k system
-	virtual float getVMagnitude(const StelCore* core) const;
+	virtual float getVMagnitude(const StelCore* core) const Q_DECL_OVERRIDE;
 	//! sets the nameI18 property with the appropriate translation.
 	//! Function overriden to handle the problem with name conflicts.
-	virtual void translateName(const StelTranslator& trans);
-	virtual QString getEnglishName(void) const {return englishName;}
-	virtual QString getNameI18n(void) const {return nameI18;}
+	virtual void translateName(const StelTranslator& trans) Q_DECL_OVERRIDE;
+	virtual QString getEnglishName(void) const Q_DECL_OVERRIDE {return englishName;}
+	virtual QString getNameI18n(void) const Q_DECL_OVERRIDE {return nameI18;}
 	QString getCommonEnglishName(void) const {return englishName;}
 	QString getCommonNameI18n(void) const {return nameI18;}
 
@@ -102,18 +102,18 @@ public:
 	void setAbsoluteMagnitudeAndSlope(const float magnitude, const float slope);
 
 	//! get sidereal period for comet, days, or returns 0 if not possible (paraboloid, hyperboloid orbit)
-	virtual double getSiderealPeriod() const;
+	virtual double getSiderealPeriod() const Q_DECL_OVERRIDE;
 
 	//! re-implementation of Planet's draw()
-	virtual void draw(StelCore* core, float maxMagLabels, const QFont& planetNameFont);
+	virtual void draw(StelCore* core, float maxMagLabels, const QFont& planetNameFont) Q_DECL_OVERRIDE;
 
 	// re-implementation of Planet's update() to prepare tails (extinction etc). @param deltaTime: ms (since last call)
-	virtual void update(int deltaTime);
+	virtual void update(int deltaTime) Q_DECL_OVERRIDE;
 
 private:
 	//! @returns estimates for (Coma diameter [AU], gas tail length [AU]).
 	//! Using the formula from Guide found by the GSoC2012 initiative at http://www.projectpluto.com/update7b.htm#comet_tail_formula
-	Vec2f getComaDiameterAndTailLengthAU() const;
+	Vec2d getComaDiameterAndTailLengthAU() const;
 	void drawTail(StelCore* core, StelProjector::ModelViewTranformP transfo, bool gas);
 	void drawComa(StelCore* core, StelProjector::ModelViewTranformP transfo);
 
@@ -131,7 +131,7 @@ private:
 	//! @param colorArr vertex colors (if not textured) r0, g0, b0, r1, g1, b1, ...
 	//! @param indices into the former arrays (zero-starting), triplets forming triangles: t0,0, t0,1, t0,2, t1,0, t1,1, t1,2, ...
 	//! @param xOffset for the dust tail, this may introduce a bend. Units are x per sqrt(z).
-	void computeParabola(const float parameter, const float topradius, const float zshift, QVector<Vec3d>& vertexArr, QVector<float>& texCoordArr, QVector<unsigned short>& indices, const float xOffset=0.0f);
+	void computeParabola(const double parameter, const double topradius, const double zshift, QVector<Vec3d>& vertexArr, QVector<float>& texCoordArr, QVector<unsigned short>& indices, const double xOffset=0.0);
 
 	float slopeParameter;
 	//double semiMajorAxis;
@@ -139,7 +139,7 @@ private:
 	bool nameIsProvisionalDesignation;
 
 	//GZ Tail additions
-	Vec2f tailFactors; // result of latest call to getComaDiameterAndTailLengthAU(); Results cached here for infostring. [0]=Coma diameter, [1] gas tail length.
+	Vec2d tailFactors; // result of latest call to getComaDiameterAndTailLengthAU(); Results cached here for infostring. [0]=Coma diameter, [1] gas tail length.
 	bool tailActive;		//! true if there is a tail long enough to be worth drawing. Drawing tails is quite costly.
 	bool tailBright;		//! true if tail is bright enough to draw.
 	double deltaJDEtail;            //! like deltaJDE, but time difference between tail geometry updates.

@@ -124,18 +124,14 @@ void MinorPlanet::setMinorPlanetNumber(int number)
 	minorPlanetNumber = number;
 }
 
-void MinorPlanet::setAbsoluteMagnitudeAndSlope(const double magnitude, const double slope)
+void MinorPlanet::setAbsoluteMagnitudeAndSlope(const float magnitude, const float slope)
 {
-	if (slope < -1.0 || slope > 2.0)
+	if (slope < -1.0f || slope > 2.0f)
 	{
 		// G "should" be between 0 and 1, but may be somewhat outside.
 		qDebug() << "MinorPlanet::setAbsoluteMagnitudeAndSlope(): Invalid slope parameter value (must be between -1 and 2, mostly [0..1])";
 		return;
 	}
-
-	//TODO: More checks?
-	//TODO: Make it set-once like the number?
-
 	absoluteMagnitude = magnitude;
 	slopeParameter = slope;
 }
@@ -143,7 +139,11 @@ void MinorPlanet::setAbsoluteMagnitudeAndSlope(const double magnitude, const dou
 void MinorPlanet::setProvisionalDesignation(QString designation)
 {
 	//TODO: This feature has to be implemented better, anyway.
-	provisionalDesignationHtml = renderProvisionalDesignationinHtml(designation);
+	if (designation.length()>0)
+	{
+		provisionalDesignationHtml = renderProvisionalDesignationinHtml(designation);
+		nameIsProvisionalDesignation = false;
+	}
 }
 
 QString MinorPlanet::getEnglishName() const

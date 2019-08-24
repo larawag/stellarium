@@ -2366,7 +2366,7 @@ float* ComputeCosSinRho(const unsigned int segments)
 	Q_ASSERT(segments<=MAX_STACKS);
 	
 	// Difference angle between the stops. Always use M_PI/segments!
-	const float dRho = static_cast<float>(M_PI) / segments;
+	const float dRho = static_cast<float>(M_PI / segments);
 	float *cos_sin = cos_sin_rho;
 	float *cos_sin_rev = cos_sin + 2*(segments+1);
 	const float c = cosf(dRho);

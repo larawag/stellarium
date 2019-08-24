@@ -39,8 +39,8 @@
 #include <QDebug>
 
 // for compute tail shape
-#define COMET_TAIL_SLICES 16 // segments around the perimeter
-#define COMET_TAIL_STACKS 16 // cuts along the rotational axis
+#define COMET_TAIL_SLICES 16u // segments around the perimeter
+#define COMET_TAIL_STACKS 16u // cuts along the rotational axis
 
 // These are to avoid having index arrays for each comet when all are equal.
 bool Comet::createTailIndices=true;
@@ -162,7 +162,7 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	if (flags&ObjectType && getPlanetType()!=isUNDEFINED)
 	{
 		QString cometType = qc_("non-periodic", "type of comet");
-		if (((CometOrbit *)orbitPtr)->getEccentricity() != 1.0)
+		if ((static_cast<CometOrbit *>(orbitPtr))->getEccentricity() != 1.0)
 		{
 			// Parabolic and hyperbolic comets don't have semi-major axis of the orbit. We have comet with elliptic orbit.
 			cometType = qc_("periodic", "type of comet");
@@ -192,8 +192,8 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	QString distAU, distKM;
 	if (flags&Distance)
 	{
-		double hdistanceAu = getHeliocentricEclipticPos().length();
-		double hdistanceKm = AU * hdistanceAu;
+		const double hdistanceAu = getHeliocentricEclipticPos().length();
+		const double hdistanceKm = AU * hdistanceAu;
 		// TRANSLATORS: Unit of measure for distance - astronomical unit
 		QString au = qc_("AU", "distance, astronomical unit");
 		bool useKM = true;
@@ -210,8 +210,8 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 		}
 		oss << QString("%1: %2 %3 (%4 %5)").arg(q_("Distance from Sun"), distAU, au, distKM, useKM ? km : Mkm) << "<br />";
 
-		double distanceAu = getJ2000EquatorialPos(core).length();
-		double distanceKm = AU * distanceAu;
+		const double distanceAu = getJ2000EquatorialPos(core).length();
+		const double distanceKm = AU * distanceAu;
 		if (distanceAu < 0.1)
 		{
 			distAU = QString::number(distanceAu, 'f', 6);
@@ -232,8 +232,8 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 		// TRANSLATORS: Unit of measure for speed - kilometers per second
 		QString kms = qc_("km/s", "speed");
 
-		Vec3d orbitalVel=getEclipticVelocity();
-		double orbVel=orbitalVel.length();
+		const Vec3d orbitalVel=getEclipticVelocity();
+		const double orbVel=orbitalVel.length();
 		if (orbVel>0.)
 		{ // AU/d * km/AU /24
 			oss << QString("%1: %2 %3").arg(q_("Orbital velocity")).arg(orbVel* AU/86400., 0, 'f', 3).arg(kms) << "<br />";
@@ -243,14 +243,14 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	if (flags&Extra)
 	{
 		// If semi-major axis not zero then calculate and display orbital period for comet in days
-		double siderealPeriod = getSiderealPeriod();
+		const double siderealPeriod = getSiderealPeriod();
 		if (siderealPeriod>0.0)
 		{
 			// Sidereal (orbital) period for comets in Julian years (symbol: a)
 			oss << QString("%1: %2 a").arg(q_("Sidereal period"), QString::number(siderealPeriod/365.25, 'f', 3)) << "<br />";
 		}
 
-		double siderealPeriodCurrentPlanet = core->getCurrentPlanet()->getSiderealPeriod();
+		const double siderealPeriodCurrentPlanet = core->getCurrentPlanet()->getSiderealPeriod();
 		if (siderealPeriodCurrentPlanet > 0.0 && siderealPeriod > 0.0 && core->getCurrentPlanet()->getPlanetType()==Planet::isPlanet && getPlanetType()!=Planet::isArtificial && getPlanetType()!=Planet::isStar && getPlanetType()!=Planet::isMoon)
 		{
 			double sp = qAbs(1/(1/siderealPeriodCurrentPlanet - 1/siderealPeriod));
@@ -278,13 +278,13 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	}
 
 
-	if ((flags&Size) && (tailFactors[0]>0.0f))
+	if ((flags&Size) && (tailFactors[0]>0.0))
 	{
 		// GZ: Add estimates for coma diameter and tail length.
 		QString comaEst = q_("Coma diameter (estimate)");
-		float coma = floor(tailFactors[0]*AU/1000.0f)*1000.0f;
-		double tail = tailFactors[1]*AU;
-		double distanceKm = AU * getJ2000EquatorialPos(core).length();
+		const double coma = floor(tailFactors[0]*AU/1000.0)*1000.0;
+		const double tail = tailFactors[1]*AU;
+		const double distanceKm = AU * getJ2000EquatorialPos(core).length();
 		// Try to estimate tail length in degrees.
 		// TODO: Take projection effect into account!
 		// The estimates here assume that the tail is seen from the side.
@@ -328,7 +328,7 @@ QVariantMap Comet::getInfoMap(const StelCore *core) const
 
 double Comet::getSiderealPeriod() const
 {
-	double semiMajorAxis=((CometOrbit*)orbitPtr)->getSemimajorAxis();
+	double semiMajorAxis=(static_cast<CometOrbit*>(orbitPtr))->getSemimajorAxis();
 	return ((semiMajorAxis>0) ? StelUtils::calculateSiderealPeriod(semiMajorAxis) : 0.);
 }
 
@@ -363,15 +363,15 @@ void Comet::update(int deltaTime)
 	Planet::update(deltaTime);
 
 	//calculate FOV fade value, linear fade between intensityMaxFov and intensityMinFov
-	const double vfov = StelApp::getInstance().getCore()->getMovementMgr()->getCurrentFov();
-	intensityFovScale = qBound(0.25,(vfov - intensityMinFov) / (intensityMaxFov - intensityMinFov),1.0);
+	const float vfov = static_cast<float>(StelApp::getInstance().getCore()->getMovementMgr()->getCurrentFov());
+	intensityFovScale = qBound(0.25f,(vfov - intensityMinFov) / (intensityMaxFov - intensityMinFov),1.0f);
 
 	// The rest deals with updating tail geometries and brightness
 	StelCore* core=StelApp::getInstance().getCore();
 	double dateJDE=core->getJDE();
 
 	// The CometOrbit is in fact available in userDataPtr!
-	CometOrbit* orbit=(CometOrbit*)orbitPtr;
+	CometOrbit* orbit=static_cast<CometOrbit*>(orbitPtr);
 	Q_ASSERT(orbit);
 	if (!orbit->objectDateValid(dateJDE)) return; // don't do anything if out of useful date range. This allows having hundreds of comet elements.
 
@@ -635,16 +635,16 @@ void Comet::drawComa(StelCore* core, StelProjector::ModelViewTranformP transfo)
 }
 
 // Formula found at http://www.projectpluto.com/update7b.htm#comet_tail_formula
-Vec2f Comet::getComaDiameterAndTailLengthAU() const
+Vec2d Comet::getComaDiameterAndTailLengthAU() const
 {
-	const float r = getHeliocentricEclipticPos().length();
-	const float mhelio = absoluteMagnitude + slopeParameter * log10(r);
-	const float Do = pow(10.0f, ((-0.0033f*mhelio - 0.07f) * mhelio + 3.25f));
-	const float common = 1.0f - pow(10.0f, (-2.0f*r));
-	const float D = Do * common * (1.0f - pow(10.0f, -r)) * (1000.0f*AU_KM);
-	const float Lo = pow(10.0f, ((-0.0075f*mhelio - 0.19f) * mhelio + 2.1f));
-	const float L = Lo*(1.0f-pow(10.0f, -4.0f*r)) * common * (1e6*AU_KM);
-	return Vec2f(D, L);
+	const double r = getHeliocentricEclipticPos().length();
+	const double mhelio = absoluteMagnitude + slopeParameter * log10(r);
+	const double Do = pow(10.0, ((-0.0033*mhelio - 0.07) * mhelio + 3.25));
+	const double common = 1.0 - pow(10.0, (-2.0*r));
+	const double D = Do * common * (1.0 - pow(10.0f, -r)) * (1000.0*AU_KM);
+	const double Lo = pow(10.0f, ((-0.0075*mhelio - 0.19) * mhelio + 2.1));
+	const double L = Lo*(1.0-pow(10.0f, -4.0*r)) * common * (1e6*AU_KM);
+	return Vec2d(D, L);
 }
 
 void Comet::computeComa(const float diameter)
@@ -656,23 +656,23 @@ void Comet::computeComa(const float diameter)
 //! (Maybe slices must be an even number.)
 // Parabola equation: z=x²/2p.
 // xOffset for the dust tail, this may introduce a bend. Units are x per sqrt(z).
-void Comet::computeParabola(const float parameter, const float radius, const float zshift,
+void Comet::computeParabola(const double parameter, const double radius, const double zshift,
 						  QVector<Vec3d>& vertexArr, QVector<float>& texCoordArr,
-						  QVector<unsigned short> &indices, const float xOffset)
+						  QVector<unsigned short> &indices, const double xOffset)
 {
 	// keep the array and replace contents. However, using replace() is only slightly faster.
-	if (vertexArr.length() < ((COMET_TAIL_SLICES*COMET_TAIL_STACKS+1)))
+	if (vertexArr.length() < (static_cast<int>(COMET_TAIL_SLICES*COMET_TAIL_STACKS+1)))
 		vertexArr.resize((COMET_TAIL_SLICES*COMET_TAIL_STACKS+1));
 	if (createTailIndices) indices.clear();
 	if (createTailTextureCoords) texCoordArr.clear();
-	int i;
+	unsigned short i;
 	// The parabola has triangular faces with vertices on two circles that are rotated against each other. 
-	float xa[2*COMET_TAIL_SLICES];
-	float ya[2*COMET_TAIL_SLICES];
-	float x, y, z;
+	double xa[2*COMET_TAIL_SLICES];
+	double ya[2*COMET_TAIL_SLICES];
+	double x, y, z;
 	
 	// fill xa, ya with sin/cosines. TBD: make more efficient with index mirroring etc.
-	float da=M_PI/COMET_TAIL_SLICES; // full circle/2slices
+	double da=M_PI/COMET_TAIL_SLICES; // full circle/2slices
 	for (i=0; i<2*COMET_TAIL_SLICES; ++i){
 		xa[i]=-sin(i*da);
 		ya[i]=cos(i*da);
@@ -683,15 +683,14 @@ void Comet::computeParabola(const float parameter, const float radius, const flo
 	if (createTailTextureCoords) texCoordArr << 0.5f << 0.5f;
 	// define the indices lying on circles, starting at 1: odd rings have 1/slices+1/2slices, even-numbered rings straight 1/slices
 	// inner ring#1
-	int ring;
-	for (ring=1; ring<=COMET_TAIL_STACKS; ++ring){
+	for (unsigned short ring=1; ring<=COMET_TAIL_STACKS; ++ring){
 		z=ring*radius/COMET_TAIL_STACKS; z=z*z/(2*parameter) + zshift;
-		float xShift= xOffset*z*z;
+		double xShift= xOffset*z*z;
 		for (i=ring & 1; i<2*COMET_TAIL_SLICES; i+=2) { // i.e., ring1 has shifted vertices, ring2 has even ones.
 			x=xa[i]*radius*ring/COMET_TAIL_STACKS;
 			y=ya[i]*radius*ring/COMET_TAIL_STACKS;
 			vertexArr.replace(vertexArrIndex++, Vec3d(x+xShift, y, z));
-			if (createTailTextureCoords) texCoordArr << 0.5+ 0.5*x/radius << 0.5+0.5*y/radius;
+			if (createTailTextureCoords) texCoordArr << 0.5f+ 0.5f*static_cast<float>(x/radius) << 0.5f+0.5f*static_cast<float>(y/radius);
 		}
 	}
 	// now link the faces with indices.
@@ -700,8 +699,8 @@ void Comet::computeParabola(const float parameter, const float radius, const flo
 		for (i=1; i<COMET_TAIL_SLICES; ++i) indices << 0 << i << i+1;
 		indices << 0 << COMET_TAIL_SLICES << 1; // close inner fan.
 		// The other slices are a repeating pattern of 2 possibilities. Index @ring always is on the inner ring (slices-agon)
-		for (ring=1; ring<COMET_TAIL_STACKS; ring+=2) { // odd rings
-			const int first=(ring-1)*COMET_TAIL_SLICES+1;
+		for (unsigned short ring=1; ring<COMET_TAIL_STACKS; ring+=2) { // odd rings
+			const unsigned short first=(ring-1)*COMET_TAIL_SLICES+1;
 			for (i=0; i<COMET_TAIL_SLICES-1; ++i){
 				indices << first+i << first+COMET_TAIL_SLICES+i << first+COMET_TAIL_SLICES+1+i;
 				indices << first+i << first+COMET_TAIL_SLICES+1+i << first+1+i;
@@ -711,8 +710,8 @@ void Comet::computeParabola(const float parameter, const float radius, const flo
 			indices << ring*COMET_TAIL_SLICES << ring*COMET_TAIL_SLICES+1 << first;
 		}
 
-		for (ring=2; ring<COMET_TAIL_STACKS; ring+=2) { // even rings: different sequence.
-			const int first=(ring-1)*COMET_TAIL_SLICES+1;
+		for (unsigned short ring=2; ring<COMET_TAIL_STACKS; ring+=2) { // even rings: different sequence.
+			const unsigned short first=(ring-1)*COMET_TAIL_SLICES+1;
 			for (i=0; i<COMET_TAIL_SLICES-1; ++i){
 				indices << first+i << first+COMET_TAIL_SLICES+i << first+1+i;
 				indices << first+1+i << first+COMET_TAIL_SLICES+i << first+COMET_TAIL_SLICES+1+i;

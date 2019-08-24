@@ -512,16 +512,10 @@ void SolarSystem::loadPlanets()
 			shadowPlanetCount++;
 }
 
-unsigned char SolarSystem::BvToColorIndex(float bV)
+unsigned char SolarSystem::BvToColorIndex(double bV)
 {
-	double dBV = bV;
-	dBV *= 1000.0;
-	if (dBV < -500)
-		dBV = -500;
-	else if (dBV > 3499)
-		dBV = 3499;
-
-	return (unsigned int)floor(0.5+127.0*((500.0+dBV)/4000.0));
+	const double dBV = qBound(-500., bV*1000.0, 3499.);
+	return static_cast<unsigned char>(floor(0.5+127.0*((500.0+dBV)/4000.0)));
 }
 
 bool SolarSystem::loadPlanets(const QString& filePath)
@@ -651,19 +645,17 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 		}
 
 		const QString coordFuncName = pd.value(secname+"/coord_func").toString();
-		const QString axisFuncName = pd.value(secname+"/axis_func").toString(); // TODO: Make sense out of it!
 		// qDebug() << "englishName:" << englishName << ", parent:" << strParent <<  ", coord_func:" << coordFuncName;
 		posFuncType posfunc=Q_NULLPTR;
 		void* orbitPtr=Q_NULLPTR;
 		OsculatingFunctType *osculatingFunc = Q_NULLPTR;
 		bool closeOrbit = true; //  = pd.value(secname+"/closeOrbit", true).toBool();   2017: THIS ENTRY NO LONGER EXISTS!
-		double semi_major_axis; // used again below.
+		double semi_major_axis=0; // used again below.
 
-		if (coordFuncName=="ell_orbit") // used for planet moons.
+		if (coordFuncName=="ell_orbit") // used for planet moons. TODO: rename to moon_orbit
 		{
 			// GZ TODO: It seems ell_orbit is only used for planet moons. Just assert eccentricity<1 and remove a few extra calculations?
 			// Read the orbital elements
-			const double epoch = pd.value(secname+"/orbit_Epoch",J2000).toDouble();
 			const double eccentricity = pd.value(secname+"/orbit_Eccentricity", 0.0).toDouble();
 			if (eccentricity >= 1.0)
 			{
@@ -671,7 +663,6 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 				qWarning() << "SolarSystem::loadPlanets() Planet moon" << englishName << "with eccentricity >=1 found. This is obviously a data error.";
 			}
 			double pericenterDistance = pd.value(secname+"/orbit_PericenterDistance",-1e100).toDouble();
-			double semi_major_axis;
 			if (pericenterDistance <= 0.0) {
 				semi_major_axis = pd.value(secname+"/orbit_SemiMajorAxis",-1e100).toDouble();
 				if (semi_major_axis <= -1e100) {
@@ -706,7 +697,6 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			} else {
 				period = 2.0*M_PI/meanMotion;
 			}
-			const double inclination = pd.value(secname+"/orbit_Inclination", 0.0).toDouble()*(M_PI/180.0);
 			const double ascending_node = pd.value(secname+"/orbit_AscendingNode", 0.0).toDouble()*(M_PI/180.0);
 			double arg_of_pericenter = pd.value(secname+"/orbit_ArgOfPericenter",-1e100).toDouble();
 			double long_of_pericenter;
@@ -748,12 +738,12 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			// Create an elliptical orbit
 			EllipticalOrbit *orb = new EllipticalOrbit(pericenterDistance,     // [AU]
 								   eccentricity,           // 0..>1, but practically only 0..1
-								   inclination,            // [radians]
+								   pd.value(secname+"/orbit_Inclination", 0.0).toDouble()*(M_PI/180.0), // [radians]
 								   ascending_node,         // [radians]
 								   arg_of_pericenter,      // [radians]
 								   mean_anomaly,           // [radians]
 								   period,                 // [days]
-								   epoch,                  // [JDE]
+								   pd.value(secname+"/orbit_Epoch",J2000).toDouble(), // [JDE]
 								   parentRotObliquity,     // [radians]
 								   parent_rot_asc_node,    // [radians]
 								   parent_rot_j2000_longitude);
@@ -762,7 +752,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			orbitPtr = orb;
 			posfunc = &ellipticalOrbitPosFunc;
 		}
-		else if (coordFuncName=="comet_orbit") // used for minor planets and comets, in orbit around the sun!
+		else if (coordFuncName=="comet_orbit") // used for minor planets and comets, in orbit around the sun! TODO: rename to kepler_orbit
 		{
 			// Read the orbital elements
 			// orbit_PericenterDistance,orbit_SemiMajorAxis: given in AU
@@ -798,13 +788,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 							   << ": when the parent body is not the sun, you must provide "
 							   << "either orbit_MeanMotion or orbit_Period";
 					} else {
-						// in case of parent=sun: use Gaussian gravitational constant
-						// for calculating meanMotion:
-						//meanMotion = (eccentricity >= 0.9999 && eccentricity <= 1.0)
-						//			? 0.01720209895 * (1.5/pericenterDistance) * sqrt(0.5/pericenterDistance)
-						//			: (semi_major_axis > 0.0)
-						//			? 0.01720209895 / (semi_major_axis*sqrt(semi_major_axis))
-						//			: 0.01720209895 / (-semi_major_axis*sqrt(-semi_major_axis));
+						// in case of parent=sun: use Gaussian gravitational constant for calculating meanMotion:
 						meanMotion = (eccentricity == 1.0)
 									? 0.01720209895 * (1.5/pericenterDistance) * std::sqrt(0.5/pericenterDistance)  // GZ: This is Heafner's W / dt
 									: 0.01720209895 / (fabs(semi_major_axis)*std::sqrt(fabs(semi_major_axis)));
@@ -830,14 +814,13 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 					time_at_pericenter = epoch - mean_anomaly / meanMotion;
 				}
 			}
-			const double orbitGoodDays=pd.value(secname+"/orbit_good", 1000).toDouble();
-			const double inclination = pd.value(secname+"/orbit_Inclination").toDouble()*(M_PI/180.0);
-			const double arg_of_pericenter = pd.value(secname+"/orbit_ArgOfPericenter").toDouble()*(M_PI/180.0);
-			const double ascending_node = pd.value(secname+"/orbit_AscendingNode").toDouble()*(M_PI/180.0);
+
 			const double parentRotObliquity = parent->getParent() ? parent->getRotObliquity(2451545.0) : 0.0;
 			const double parent_rot_asc_node = parent->getParent() ? parent->getRotAscendingNode() : 0.0;
 			double parent_rot_j2000_longitude = 0.0;
+			Q_ASSERT(parent->getParent()==Q_NULLPTR);
 			if (parent->getParent()) {
+				Q_ASSERT(0); // Just to be sure it's DEAD CODE?
 				qDebug() << "Really? A comet orbiting " << pd.value("parent") << "has a greatparent?";
 				const double c_obl = cos(parentRotObliquity);
 				const double s_obl = sin(parentRotObliquity);
@@ -854,11 +837,11 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			//qDebug() << "Creating CometOrbit for" << englishName;
 			CometOrbit *orb = new CometOrbit(pericenterDistance,
 							 eccentricity,
-							 inclination,
-							 ascending_node,
-							 arg_of_pericenter,
+							 pd.value(secname+"/orbit_Inclination").toDouble()*(M_PI/180.0),
+							 pd.value(secname+"/orbit_AscendingNode").toDouble()*(M_PI/180.0),
+							 pd.value(secname+"/orbit_ArgOfPericenter").toDouble()*(M_PI/180.0),
 							 time_at_pericenter,
-							 orbitGoodDays,
+							 pd.value(secname+"/orbit_good", 1000).toDouble(),
 							 meanMotion,
 							 parentRotObliquity,
 							 parent_rot_asc_node,
@@ -997,8 +980,8 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			minorBodies << englishName;
 
 			Vec3f color = Vec3f(1.f, 1.f, 1.f);
-			float bV = pd.value(secname+"/color_index_bv", 99.f).toFloat();
-			if (bV<99.f)
+			const double bV = pd.value(secname+"/color_index_bv", 99.).toDouble();
+			if (bV<99.)
 				color = skyDrawer->indexToColor(BvToColorIndex(bV)); // color should have at least 1 element==1.
 			else
 				color = StelUtils::strToVec3f(pd.value(secname+"/color", "1.0,1.0,1.0").toString());
@@ -1023,43 +1006,26 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 						    closeOrbit,
 						    hidden,
 						    type));
-
 			QSharedPointer<MinorPlanet> mp =  p.dynamicCast<MinorPlanet>();
 
-			//Number
-			int minorPlanetNumber = pd.value(secname+"/minor_planet_number", 0).toInt();
-			if (minorPlanetNumber)
-			{
-				mp->setMinorPlanetNumber(minorPlanetNumber);
-			}
-
-			//Provisional designation
-			QString provisionalDesignation = pd.value(secname+"/provisional_designation").toString();
-			if (!provisionalDesignation.isEmpty())
-			{
-				mp->setProvisionalDesignation(provisionalDesignation);
-			}
+			//Number, Provisional designation
+			mp->setMinorPlanetNumber(pd.value(secname+"/minor_planet_number", 0).toInt());
+			mp->setProvisionalDesignation(pd.value(secname+"/provisional_designation", "").toString());
 
 			//H-G magnitude system
-			const float magnitude = pd.value(secname+"/absolute_magnitude", -99).toFloat();
-			const float slope = pd.value(secname+"/slope_parameter", 0.15).toFloat();
-			if (magnitude > -99)
+			const float magnitude = pd.value(secname+"/absolute_magnitude", -99.f).toFloat();
+			const float slope = pd.value(secname+"/slope_parameter", 0.15f).toFloat();
+			if (magnitude > -99.f)
 			{
-				if (slope >= 0 && slope <= 1)
-				{
-					mp->setAbsoluteMagnitudeAndSlope(magnitude, slope);
-				}
-				else
-				{
-					mp->setAbsoluteMagnitudeAndSlope(magnitude, 0.15f);
-				}
+					mp->setAbsoluteMagnitudeAndSlope(magnitude, qBound(0.0f, slope, 1.0f));
 			}
 
-			// GZ TODO after rebase: Do we still need to set semimajor axis? Only the orbit needs to know this!
-			// mp->setSemiMajorAxis(pd.value(secname+"/orbit_SemiMajorAxis", 0).toDouble());
-			mp->setColorIndexBV(bV);
+			mp->setColorIndexBV(static_cast<float>(bV));
 			mp->setSpectralType(pd.value(secname+"/spec_t", "").toString(), pd.value(secname+"/spec_b", "").toString());
-			mp->deltaJDE = 2.0*semi_major_axis*StelCore::JD_SECOND;
+			if (semi_major_axis>0)
+				mp->deltaJDE = 2.0*semi_major_axis*StelCore::JD_SECOND;
+			 else if ((semi_major_axis<=0.0) && (type!="interstellar object"))
+				qWarning() << "WARNING: Minor Body" << englishName << "has no semimajor axis!";
 
 			systemMinorBodies.push_back(p);
 		}
@@ -1086,31 +1052,15 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 					      pd.value(secname+"/dust_lengthfactor", 0.4f).toFloat(),
 					      pd.value(secname+"/dust_brightnessfactor", 1.5f).toFloat()
 					      ));
-
-			QSharedPointer<Comet> mp =  p.dynamicCast<Comet>();
+			QSharedPointer<Comet> mp = p.dynamicCast<Comet>();
 
 			//g,k magnitude system
 			const float magnitude = pd.value(secname+"/absolute_magnitude", -99).toFloat();
 			const float slope = pd.value(secname+"/slope_parameter", 4.0f).toFloat();
 			if (magnitude > -99)
 			{
-				if (slope >= 0 && slope <= 20)
-				{
-					mp->setAbsoluteMagnitudeAndSlope(magnitude, slope);
-				}
-				else
-				{
-					mp->setAbsoluteMagnitudeAndSlope(magnitude, 4.0f);
-				}
+				mp->setAbsoluteMagnitudeAndSlope(magnitude, qBound(0.0f, slope, 20.0f));
 			}
-
-//			// GZ TODO after rebase: Check if Comet needs to know its semimajor axis. Only its Orbit needs to know anything about this.
-//			const double eccentricity = pd.value(secname+"/orbit_Eccentricity",0.0).toDouble();
-//			const double pericenterDistance = pd.value(secname+"/orbit_PericenterDistance",-1e100).toDouble();
-//			if (eccentricity<1 && pericenterDistance>0)
-//			{
-//				mp->setSemiMajorAxis(pericenterDistance / (1.0-eccentricity));
-//			}
 			systemMinorBodies.push_back(p);
 		}
 		else // type==star|planet|moon|
@@ -1118,10 +1068,6 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 			// Set possible default name of the normal map for avoiding yin-yang shaped moon
 			// phase when normal map key not exists. Example: moon_normals.png
 			// Details: https://bugs.launchpad.net/stellarium/+bug/1335609
-			QString normalMapName = "";
-			bool hidden = pd.value(secname+"/hidden", false).toBool();
-			if (!hidden) // no normal maps for invisible objects!
-				normalMapName = englishName.toLower().append("_normals.png");
 			p = PlanetP(new Planet(englishName,
 					       pd.value(secname+"/radius", 1.0).toDouble()/AU,
 					       pd.value(secname+"/oblateness", 0.0).toDouble(),
@@ -1129,17 +1075,17 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 					       pd.value(secname+"/albedo", 0.25f).toFloat(),
 					       pd.value(secname+"/roughness",0.9f).toFloat(),
 					       pd.value(secname+"/tex_map", "nomap.png").toString(),
-					       pd.value(secname+"/normals_map", normalMapName).toString(),
+					       pd.value(secname+"/normals_map", englishName.toLower().append("_normals.png")).toString(),
 					       pd.value(secname+"/model").toString(),
 					       posfunc,
 					       orbitPtr, // This remains NULL for the major planets, or has an EllipticalOrbit for planet moons.
 					       osculatingFunc,
 					       closeOrbit,
-					       hidden,
+					       pd.value(secname+"/hidden", false).toBool(),
 					       pd.value(secname+"/atmosphere", false).toBool(),
 					       pd.value(secname+"/halo", true).toBool(),          // GZ new default. Avoids clutter in ssystem.ini.
 					       type));
-			p->absoluteMagnitude = pd.value(secname+"/absolute_magnitude", -99.).toFloat();
+			p->absoluteMagnitude = pd.value(secname+"/absolute_magnitude", -99.f).toFloat();
 
 			// Moon designation (planet index + IAU moon number)
 			QString moonDesignation = pd.value(secname+"/iau_moon_number", "").toString();
@@ -1176,7 +1122,7 @@ bool SolarSystem::loadPlanets(const QString& filePath)
 		const double rotPeriod=pd.value(secname+"/rot_periode", pd.value(secname+"/orbit_Period", 24.).toDouble()).toDouble()/24.;
 		const double rotOffset=pd.value(secname+"/rot_rotation_offset",0.).toDouble();
 
-		if(J2000NPoleRA || J2000NPoleDE)
+		if((J2000NPoleRA!=0.) || (J2000NPoleDE!=0.))
 		{
 			// Old solution: Make this once for J2000.
 			// New in 0.20: Repeat this block in planet::update() if required.
@@ -2569,16 +2515,16 @@ QStringList SolarSystem::getAllMinorPlanetCommonEnglishNames() const
 void SolarSystem::reloadPlanets()
 {
 	// Save flag states
-	bool flagScaleMoon = getFlagMoonScale();
-	float moonScale = getMoonScale();
-	bool flagScaleMinorBodies=getFlagMinorBodyScale();
-	float minorScale= getMinorBodyScale();
-	bool flagPlanets = getFlagPlanets();
-	bool flagHints = getFlagHints();
-	bool flagLabels = getFlagLabels();
-	bool flagOrbits = getFlagOrbits();
-	bool flagNative = getFlagNativePlanetNames();
-	bool flagTrans = getFlagTranslatedNames();
+	const bool flagScaleMoon = getFlagMoonScale();
+	const double moonScale = getMoonScale();
+	const bool flagScaleMinorBodies=getFlagMinorBodyScale();
+	const double minorScale= getMinorBodyScale();
+	const bool flagPlanets = getFlagPlanets();
+	const bool flagHints = getFlagHints();
+	const bool flagLabels = getFlagLabels();
+	const bool flagOrbits = getFlagOrbits();
+	const bool flagNative = getFlagNativePlanetNames();
+	const bool flagTrans = getFlagTranslatedNames();
 	bool hasSelection = false;
 
 	// Save observer location (fix for LP bug # 969211)

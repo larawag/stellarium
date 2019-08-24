@@ -104,15 +104,15 @@ public:
 	//! different phase angles.
 	//! @param magnitude Absolute magnitude H
 	//! @param slope Slope parameter G. This is usually [0..1], sometimes slightly outside. Allowed here [-1..2].
-	void setAbsoluteMagnitudeAndSlope(const double magnitude, const double slope);
+	void setAbsoluteMagnitudeAndSlope(const float magnitude, const float slope);
 
 	//! renders the subscript in a minor planet provisional designation with HTML.
 	//! \returns an emtpy string if the source string is not a provisional
 	//! designation.
 	static QString renderProvisionalDesignationinHtml(QString plainText);
 
-	//! set value for semi-major axis in AU
-	void setSemiMajorAxis(double value);
+	//// set value for semi-major axis in AU
+	//void setSemiMajorAxis(double value);
 
 	//! set values for spectral types
 	void setSpectralType(QString sT="", QString sB="");

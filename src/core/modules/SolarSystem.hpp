@@ -1066,7 +1066,7 @@ private:
 
 	//! Calculate a color of Solar system bodies
 	//! @param bV value of B-V color index
-	unsigned char BvToColorIndex(float bV);
+	static unsigned char BvToColorIndex(double bV);
 
 	//! Set flag which enables display of permanent orbits for objects
 	// TODO: DOCUMENT what this really does, under which circumstances etc.
