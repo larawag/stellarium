@@ -146,9 +146,9 @@ private:
 	double lastJDEtail;             //! like lastJDE, but time of last tail geometry update.
 	Mat4d gasTailRot;		//! rotation matrix for gas tail parabola
 	Mat4d dustTailRot;		//! rotation matrix for the skewed dust tail parabola
-	float dustTailWidthFactor;      //!< empirical individual broadening of the dust tail end, compared to the gas tail end. Actually, dust tail width=2*comaWidth*dustTailWidthFactor. Default 1.5
-	float dustTailLengthFactor;     //!< empirical individual length of dust tail relative to gas tail. Taken from ssystem.ini, typical value 0.3..0.5, default 0.4
-	float dustTailBrightnessFactor; //!< empirical individual brightness of dust tail relative to gas tail. Taken from ssystem.ini, default 1.5
+	double dustTailWidthFactor;     //!< empirical individual broadening of the dust tail end, compared to the gas tail end. Actually, dust tail width=2*comaWidth*dustTailWidthFactor. Default 1.5
+	double dustTailLengthFactor;    //!< empirical individual length of dust tail relative to gas tail. Taken from ssystem.ini, typical value 0.3..0.5, default 0.4
+	double dustTailBrightnessFactor;//!< empirical individual brightness of dust tail relative to gas tail. Taken from ssystem.ini, default 1.5
 	QVector<double> comaVertexArr;
 	QVector<float> comaTexCoordArr; //  --> 2014-08: could also be declared static, but it is filled by StelPainter...
 

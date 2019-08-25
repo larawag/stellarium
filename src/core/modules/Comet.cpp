@@ -388,22 +388,22 @@ void Comet::update(int deltaTime)
 			tailFactors=getComaDiameterAndTailLengthAU();
 
 			// Note that we use a diameter larger than what the formula returns. A scale factor of 1.2 is ad-hoc/empirical (GZ), but may look better.
-			computeComa(1.0f*tailFactors[0]); // TBD: APPARENTLY NO SCALING? REMOVE 1.0 and note above.
+			computeComa(1.0f*static_cast<float>(tailFactors[0])); // TBD: APPARENTLY NO SCALING? REMOVE 1.0 and note above.
 
 			tailActive = (tailFactors[1] > tailFactors[0]); // Inhibit tails drawing if too short. Would be nice to include geometric projection angle, but this is too costly.
 
 			if (tailActive)
 			{
-				float gasTailEndRadius=qMax(tailFactors[0], 0.025f*tailFactors[1]) ; // This avoids too slim gas tails for bright comets like Hale-Bopp.
-				float gasparameter=gasTailEndRadius*gasTailEndRadius/(2.0f*tailFactors[1]); // parabola formula: z=r²/2p, so p=r²/2z
+				const double gasTailEndRadius=qMax(tailFactors[0], 0.025*tailFactors[1]) ; // This avoids too slim gas tails for bright comets like Hale-Bopp.
+				const double gasparameter=gasTailEndRadius*gasTailEndRadius/(2.0*tailFactors[1]); // parabola formula: z=r²/2p, so p=r²/2z
 				// The dust tail is thicker and usually shorter. The factors can be configured in the elements.
-				float dustparameter=gasTailEndRadius*gasTailEndRadius*dustTailWidthFactor*dustTailWidthFactor/(2.0f*dustTailLengthFactor*tailFactors[1]);
+				const double dustparameter=gasTailEndRadius*gasTailEndRadius*dustTailWidthFactor*dustTailWidthFactor/(2.0*dustTailLengthFactor*tailFactors[1]);
 
 				// Find valid parameters to create paraboloid vertex arrays: dustTail, gasTail.
-				computeParabola(gasparameter, gasTailEndRadius, -0.5f*gasparameter, gastailVertexArr,  tailTexCoordArr, tailIndices);
+				computeParabola(gasparameter, gasTailEndRadius, -0.5*gasparameter, gastailVertexArr,  tailTexCoordArr, tailIndices);
 				//gastailColorArr.fill(Vec3f(0.3,0.3,0.3), gastailVertexArr.length());
 				// Now we make a skewed parabola. Skew factor (xOffset, last arg) is rather ad-hoc/empirical. TBD later: Find physically correct solution.
-				computeParabola(dustparameter, dustTailWidthFactor*gasTailEndRadius, -0.5f*dustparameter, dusttailVertexArr, tailTexCoordArr, tailIndices, 25.0f*orbit->getVelocity().length());
+				computeParabola(dustparameter, dustTailWidthFactor*gasTailEndRadius, -0.5*dustparameter, dusttailVertexArr, tailTexCoordArr, tailIndices, 25.0*orbit->getVelocity().length());
 				//dusttailColorArr.fill(Vec3f(0.3,0.3,0.3), dusttailVertexArr.length());
 
 
@@ -417,12 +417,12 @@ void Comet::update(int deltaTime)
 				//Mat4d dustTailRot=Mat4d::rotation(eclposNrm^(-velocity), 0.15f*std::acos(eclposNrm.dot(-velocity))); // GZ: This scale factor of 0.15 is empirical from photos of Halley and Hale-Bopp.
 				// The curved tail is curved towards positive X. We first rotate around the Z axis into a direction opposite of the motion vector, then again the antisolar rotation applies.
 				// In addition, we let the dust tail already start with a light tilt.
-				dustTailRot=gasTailRot * Mat4d::zrotation(atan2(velocity[1], velocity[0]) + M_PI) * Mat4d::yrotation(5.0f*velocity.length());
+				dustTailRot=gasTailRot * Mat4d::zrotation(atan2(velocity[1], velocity[0]) + M_PI) * Mat4d::yrotation(5.0*velocity.length());
 
 				// Rotate vertex arrays:
-				Vec3d* gasVertices=(Vec3d*) (gastailVertexArr.data());
-				Vec3d* dustVertices=(Vec3d*) (dusttailVertexArr.data());
-				for (int i=0; i<COMET_TAIL_SLICES*COMET_TAIL_STACKS+1; ++i)
+				Vec3d* gasVertices=static_cast<Vec3d*>(gastailVertexArr.data());
+				Vec3d* dustVertices=static_cast<Vec3d*>(dusttailVertexArr.data());
+				for (unsigned int i=0; i<COMET_TAIL_SLICES*COMET_TAIL_STACKS+1; ++i)
 				{
 					gasVertices[i].transfo4d(gasTailRot);
 					dustVertices[i].transfo4d(dustTailRot);
@@ -457,7 +457,7 @@ void Comet::update(int deltaTime)
 
 	// Separate factors, but avoid overly bright tails. I limit to about 0.7 for overlapping both tails which should not exceed full-white.
 	float gasMagFactor=qMin(0.9f*aLum, 0.7f);
-	float dustMagFactor=qMin(dustTailBrightnessFactor*aLum, 0.7f);
+	float dustMagFactor=qMin(static_cast<float>(dustTailBrightnessFactor)*aLum, 0.7f);
 
 	// TODO: Maybe make gas color distance dependent? (various typical ingredients outgas at different temperatures...)
 	Vec3f gasColor(0.15f*gasMagFactor,0.35f*gasMagFactor,0.6f*gasMagFactor); // Orig color 0.15/0.15/0.6.
