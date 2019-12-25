@@ -37,6 +37,8 @@
 #include <QList>
 #include <QSharedPointer>
 #include <QMetaEnum>
+#include "../../../src/core/modules/NomenclatureItem.hpp"
+#include <StelMainScriptAPI.hpp>
 
 StelModule* NavStarsStelPluginInterface::getStelModule() const
 {
@@ -200,8 +202,112 @@ void NavStars::draw(StelCore* core)
 			painter.drawText(static_cast<float>(pos[0]), static_cast<float>(pos[1]), label, 0, 10.f, 10.f, false);
 		}
 	}
-}
 
+
+	StelObjectP selectedObject;
+	bool isSource = StelApp::getInstance().getStelObjectMgr().getWasSelected();
+
+	// Only execute plugin if we are on Earth.
+	if (core->getCurrentLocation().planetName != "Earth")
+		return;
+
+        isEnabled = getEnableShowOnScreen();
+
+	if (isSource && isEnabled)	// (a object was chosen and information shall be shown)
+	{
+		StelApp& app = StelApp::getInstance();
+		bool withDesignations = app.getFlagUseCCSDesignation();
+
+		StelObjectP selectedObject = StelApp::getInstance().getStelObjectMgr().getSelectedObject()[0];
+		
+		//EquPos = selectedObject->getEquinoxEquatorialPos(core); TODO --> make switch available in GUI
+		EquPos = selectedObject->getJ2000EquatorialPos(core);
+
+		EquPos.normalize();
+		double dec, ra;
+                StelUtils::rectToSphe(&ra, &dec, EquPos);
+
+		LocPos = selectedObject->getSiderealPosGeometric(core);
+		double lon = core->getCurrentLocation().longitude;	// lon is already in degrees
+
+		selectedObject->setExtraInfoString("<br/>");
+
+                QString value;
+
+		double sha = 2.*M_PI - ra;
+		double lha = - std::atan2(LocPos[1], LocPos[0]);
+		double gha = 2.*M_PI + (lha - lon * M_PI_180f);
+		double gha0 = gha - sha;
+
+		/* Notes:
+		 * The time and date of Greenwich is printed to screen here for convenience of the
+		 * user so that he/she can compare the results to nautical almanacs more easily.
+		 *
+		 * UT1 would be more correct for navigational purposes. Since UT1 is
+		 * not directly available in Stellarium and since the difference is less
+		 * than 1 second, UTC (for Greenwich) is given here.
+		 *
+		 * As a nautical mile is defined as one minute of arc of a meridian,
+		 * in nautical applications angles are measured in deg, min, decimal min (DDM)
+		 * and hence a distance on the earth's surface measured in nautical miles and its
+		 * decimal parts can be computed easily by the DDM representation of angles. */
+
+		/* UTC */
+		QString navText = StelMainScriptAPI::getDate("utc") + " UTC";
+		selectedObject->addToExtraInfoString("Date/Time: " + navText + "<br/>");
+
+		/* Greenwich Hour Angle (GHA) of Vernal Equinox */
+		QString name_gha0 = qc_("GHA (Vernal Equinox)", "nautical coordinate system");
+		if (withDesignations) name_gha0 = QString("t_Gr, Vernal Equinox");
+		value = StelUtils::radToDdmPStr(gha0, 1, false, 'U');
+		navText = QString("%1: %2").arg(name_gha0, value);
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Greenwich Hour Angle (GHA) of selected object */
+		QString name_gha = qc_("GHA", "nautical coordinate system");
+		if (withDesignations)  name_gha = QString("t_Gr");
+		value = StelUtils::radToDdmPStr(gha, 1, false, 'U');
+		navText = QString("%1: %2").arg(name_gha, value);
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Local Hour Angle (LHA) of selected object */
+		QString name_lha = qc_("LHA", "nautical coordinate system");
+		if (withDesignations) name_lha = QString("t");
+		value = StelUtils::radToDdmPStr(lha, 1, false, 'U');
+		navText = QString("%1: %2").arg(name_lha, value);
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Sidereal Hour Angle (SHA) of selected object */
+		QString name_sha = qc_("SHA", "nautical coordinate system");
+		if (withDesignations) name_sha = QString("%1").arg(QChar(0x03B2));
+                value = StelUtils::radToDdmPStr(sha, 1, false, 'U');
+                navText = QString("%1: %2").arg(name_sha, value);
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Declination (Dec) of selected object */
+		QString name_dec = qc_("Dec", "nautical coordinate system");
+                if (withDesignations) name_dec = QString("%1").arg(QChar(0x03B4));
+                value = StelUtils::radToDdmPStr(dec, 1, false, 'V');
+                navText = QString("%1: %2").arg(name_dec, value);
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* compute radius of sun or moon */
+		QString name_Radius = qc_("Radius", "nautical coordinate system");
+                if (withDesignations) name_Radius = QString("R");
+                QString name = selectedObject->getEnglishName();
+
+		isMoon = ("Moon" == name);
+		isSun = ("Sun" == name);
+
+		if (isMoon || isSun)
+		{
+		        // Note: For nautical applications only radius is required
+		        angularSize = QString::number(selectedObject->getAngularSize(core) * 60.f, 'f', 1);
+		        navText = QString("%1: %2'").arg(name_Radius, angularSize);
+			selectedObject->addToExtraInfoString(navText + "<br/>");
+		}
+	}
+}
 
 void NavStars::update(double deltaTime)
 {
@@ -251,6 +357,7 @@ void NavStars::loadConfiguration(void)
 	setCurrentNavigationalStarsSetKey(conf->value("current_ns_set", "AngloAmerican").toString());
 	markerColor = StelUtils::strToVec3f(conf->value("marker_color", "0.8,0.0,0.0").toString());
 	enableAtStartup = conf->value("enable_at_startup", false).toBool();
+	enableShowOnScreen = conf->value("show_on_screen", false).toBool();
 
 	conf->endGroup();
 }
@@ -262,6 +369,7 @@ void NavStars::saveConfiguration(void)
 	conf->setValue("current_ns_set", getCurrentNavigationalStarsSetKey());
 	conf->setValue("marker_color", StelUtils::vec3fToStr(markerColor));
 	conf->setValue("enable_at_startup", enableAtStartup);
+	conf->setValue("show_on_screen", enableShowOnScreen);
 
 	conf->endGroup();
 }
@@ -300,6 +408,12 @@ QString NavStars::getCurrentNavigationalStarsSetDescription() const
 		{
 			// TRANSLATORS: The emphasis tags mark a book title.
 			txt = q_("The 81 stars that are listed in the <em>%1</em> published by the French Bureau des Longitudes.").arg("Ephémérides Nautiques");
+			break;
+		}
+		case German:
+		{
+			// TRANSLATORS: The emphasis tags mark a book title.
+			txt = q_("The 80 stars that are listed in the <em>%1</em> published by the German Bundesamt für Seeschiffahrt und Hydrographie.").arg("Nautisches Jahrbuch");
 			break;
 		}
 		case Russian:
@@ -354,6 +468,25 @@ void NavStars::populateNavigationalStarsSet(void)
 				    <<  82396 <<  85927 <<  86032 <<  87833 <<  90185 <<  91262 <<  92855
 				    <<  97649 << 100453 << 100751 << 102098 << 105199 << 107315 << 109268
 				    << 112122 << 113368 << 113881 << 113963;
+			break;
+		}
+		case German:
+		{
+			// 80 stars from German Nautical Almanac
+			// Original German name: Nautisches Jahrbuch
+			// The numbers are identical to the "Nautisches Jahrbuch"
+			starNumbers <<    677 <<   1067 <<   2081 <<   3179 <<   3419 <<   4427 <<   5447
+				    <<   7588 <<  11767 <<   9640 <<   9884 <<  14135 <<  14576 <<  15863
+				    <<  17702 <<  21421 <<  24436 <<  24608 <<  25336 <<  25428 <<  26311
+				    <<  26727 <<  27366 <<  27989 <<  28360 <<  30324 <<  30438 <<  31681
+				    <<  32349 <<  33579 <<  34444 <<  36850 <<  37279 <<  37826 <<  41037
+				    <<  44816 <<  45238 <<  46390 <<  49669 <<  52419 <<  54061 <<  57632
+				    <<  60718 <<  61084 <<  62434 <<  62956 <<  63608 <<  65378 <<  65474
+				    <<  67301 <<  68702 <<  68933 <<  69673 <<  71683 <<  72105 <<  72622
+				    <<  72607 <<  74785 <<  76267 <<  77070 <<  80763 <<  82273 <<  82396
+				    <<  85927 <<  86032 <<  86228 <<  87833 <<  90185 <<  91262 <<  92855
+				    <<  97649 << 100751 << 102098 << 105199 << 107315 << 109268 << 112122
+				    << 113368 << 113881 << 113963;
 			break;
 		}
 		case Russian:

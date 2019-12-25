@@ -35,7 +35,9 @@ class NavStarsWindow;
 /*! @defgroup navigationalStars Navigational Stars Plug-in
 @{
 The Navigational Stars plugin marks the 58 navigational stars of the
-Nautical Almanach and the 2102-D Rude Star Finder on the sky.
+Nautical Almanach and the 2102-D Rude Star Finder on the sky. Alternatively,
+the french, german, and russian selection of navigational stars are also
+available.
 
 The NavStars class is the main class of the plug-in. It manages the list of
 navigational stars and manipulate show/hide markers of them. All markers
@@ -70,6 +72,7 @@ public:
 	{
 		AngloAmerican,	//!< Anglo-American set (The Nautical Almanach)
 		French,		//!< French set (Ephémérides Nautiques)
+		German,		//!< German set (Nautisches Jahrbuch)
 		Russian		//!< Russian set (Морской астрономический ежегодник)
 	};
 
@@ -110,6 +113,9 @@ public slots:
 	void setEnableAtStartup(bool b) { enableAtStartup=b; }
 	bool getEnableAtStartup(void) const { return enableAtStartup; }
 
+	void setEnableShowOnScreen(bool b) { enableShowOnScreen=b; }
+	bool getEnableShowOnScreen(void) const { return enableShowOnScreen; }
+
 	//! Set the set of navigational stars
 	void setCurrentNavigationalStarsSet(NavigationalStarsSet nsset)
 	{
@@ -139,10 +145,12 @@ private:
 	StelPropertyMgr* propMgr;
 	QSettings* conf;	
 
+	class SolarSystem* solarSystem;
+
 	// The current set of navigational stars
 	NavigationalStarsSet currentNSSet;
 
-	bool enableAtStartup;
+	bool enableAtStartup, enableShowOnScreen;
 
 	//! List of the navigational stars' HIP numbers.
 	QList<int> starNumbers;
@@ -156,6 +164,22 @@ private:
 
 	//! Button for the bottom toolbar.
 	StelButton* toolbarButton;
+
+	//! Co-ordinates of currently-selected source.
+	Vec3d EquPos, LocPos;
+
+	//! A boolean to check the kind of source selected.
+	bool isSun, isMoon;
+
+	//! A boolean to check whether the nautical data shall be shown on screen
+	bool isEnabled;
+
+	//! Radius of Sun or Moon
+	QString angularSize;
+
+	double sunrise, sunset, duration;
+	bool sunRiseSet;
+
 };
 
 
