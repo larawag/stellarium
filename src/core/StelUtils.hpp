@@ -180,6 +180,21 @@ namespace StelUtils
 	//! @param s The input string
 	double dmsStrToRad(const QString& s);
 
+	//! Convert an angle in decimal degree to ddm format.
+	//! @param angle input angle in decimal degree
+	//! @param modulo input is 1 -> angle is (-180,180] degrees or 2 -> angle is [0,360) degrees
+	//! @param sign true if positive, false otherwise
+	//! @param d degree component
+	//! @param m minute component
+	void radToDdm(double angle, const int modulo, bool &sign, int &d, double &m);
+
+	//! Convert an angle in decimal degrees to a ddm formatted string.
+	//! @param angle input angle in decimal degree
+	//! @param precision
+	//! @param useD Define if letter "d" must be used instead of deg sign
+	//! @param flag: 'U' is unsinged, 'S' is singed with +/-, 'V' is vertically signed N/S, 'H' is horizontally signed E/W
+	QString radToDdmPStr(const double angle, const int precision, const bool useD, const char flag);
+
 	//TODO these Vector-String converters should be removed, and missing functionality added to
 	//the VecMath classes and QVariant-based conversion
 
