@@ -37,6 +37,8 @@
 #include <QList>
 #include <QSharedPointer>
 #include <QMetaEnum>
+#include <StelMainScriptAPI.hpp>
+#include <StelObject.hpp>
 
 StelModule* NavStarsStelPluginInterface::getStelModule() const
 {
@@ -196,6 +198,163 @@ void NavStars::draw(StelCore* core)
 			painter.drawText(static_cast<float>(pos[0]), static_cast<float>(pos[1]), label, 0, 10.f, 10.f, false);
 		}
 	}
+
+	bool isSource = StelApp::getInstance().getStelObjectMgr().getWasSelected();
+
+	// Only execute plugin if we are on Earth.
+	if (core->getCurrentLocation().planetName != "Earth")
+		return;
+
+	bool isEnabled = getEnableShowOnScreen();
+
+	if (isSource && isEnabled)	// (a object was chosen and information shall be shown)
+	{
+
+		StelApp& app = StelApp::getInstance();
+		bool withDesignations = app.getFlagUseCCSDesignation();
+
+		StelObjectP selectedObject = StelApp::getInstance().getStelObjectMgr().getSelectedObject()[0];
+
+		double dec, ra;
+		StelUtils::rectToSphe(&ra, &dec, setEquitorialPos(core, selectedObject));
+
+		Vec3d LocPos = selectedObject->getSiderealPosGeometric(core);
+		double lon = core->getCurrentLocation().longitude;	// in degrees
+
+		selectedObject->setExtraInfoString("<br/>");
+
+                QString value;
+
+		double sha = 2.*M_PI - ra;				// Sideral Hour Angle
+		double lha = - std::atan2(LocPos[1], LocPos[0]);	// Local Hour Angle
+		double gha = 2.*M_PI + (lha - lon * M_PI_180f);		// Greenwich Hour Angle
+		double gha0 = gha - sha;				// Greenwich Hour Angle of Vernal Equinox
+
+		/* Notes:
+		 * The time and date of Greenwich is printed to screen here for convenience of the
+		 * user so that one can compare the results to nautical almanacs more easily.
+		 *
+		 * UT1 would be more correct for navigational purposes. Since UT1 is
+		 * not directly available in Stellarium and since the difference is less
+		 * than 1 second, UTC (for Greenwich) is used here. */
+
+		/* UTC */
+		QString navText = StelMainScriptAPI::getDate("utc") + " UTC";
+		selectedObject->addToExtraInfoString("Date/Time: " + navText + "<br/>");
+
+		/* Greenwich Hour Angle (GHA) of Vernal Equinox */
+		QString name_gha0 = qc_("GHA (Vernal Equinox)", "nautical coordinate system");
+		if (withDesignations)
+		{
+			name_gha0 = QString("t_Gr, Vernal Equinox");
+		}
+		navText = QString("%1: %2").arg(name_gha0, StelUtils::radToDdmPStr(gha0, 1, false, 'U'));
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Greenwich Hour Angle (GHA) of selected object */
+		QString name_gha = qc_("GHA", "nautical coordinate system");
+		if (withDesignations)
+		{
+			name_gha = QString("t_Gr");
+		}
+		navText = QString("%1: %2").arg(name_gha, StelUtils::radToDdmPStr(gha, 1, false, 'U'));
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Local Hour Angle (LHA) of selected object */
+		QString name_lha = qc_("LHA", "nautical coordinate system");
+		if (withDesignations)
+		{
+			name_lha = QString("t");
+		}
+		navText = QString("%1: %2").arg(name_lha, StelUtils::radToDdmPStr(lha, 1, false, 'U'));
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Sidereal Hour Angle (SHA) of selected object */
+		QString name_sha = qc_("SHA", "nautical coordinate system");
+		if (withDesignations)
+		{
+			name_sha = QString("%1").arg(QChar(0x03B2));
+		}
+		navText = QString("%1: %2").arg(name_sha, StelUtils::radToDdmPStr(sha, 1, false, 'U'));
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+		/* Declination (Dec) of selected object */
+		QString name_dec = qc_("Dec", "nautical coordinate system");
+		if (withDesignations)
+		{
+			name_dec = QString("%1").arg(QChar(0x03B4));
+		}
+		navText = QString("%1: %2").arg(name_dec, StelUtils::radToDdmPStr(dec, 1, false, 'V'));
+		selectedObject->addToExtraInfoString(navText + "<br/>");
+
+                QString name = selectedObject->getEnglishName();
+
+		/* compute Horizontal Parallax of Moon or planets for nautical applications */
+		if ("Moon" == name || "Venus" == name || "Mars" == name || "Jupiter" == name || "Saturn" == name)
+		{
+			// Translators: HP is called "horizontal parallax"
+			QString name_HP = qc_("HP", "nautical coordinate system");
+			navText = QString("%1: %2'").arg(name_HP, QString::number(computeHorizontalParallax(selectedObject), 'f', 1));	// in arcmin
+			selectedObject->addToExtraInfoString(navText + "<br/>");
+		}
+
+		/* compute semi-diameter for Sun or Moon */
+		if ("Sun" == name || "Moon" == name)
+		{
+			QString name_Radius = qc_("Radius", "nautical coordinate system");
+			if (withDesignations) name_Radius = QString("R");
+			navText = QString("%1: %2'").arg(name_Radius, QString::number(computeSemiDiameter(selectedObject, core), 'f', 1));	// in arcmin
+			selectedObject->addToExtraInfoString(navText + "<br/>");
+		}
+	}
+}
+
+Vec3d NavStars::setEquitorialPos(StelCore* core, StelObjectP selectedObject)
+{
+	bool J2000EquPos = false;
+
+	Vec3d pos;
+
+	if (J2000EquPos)
+	{
+		pos = selectedObject->getJ2000EquatorialPos(core);
+	}
+	else
+	{
+		pos = selectedObject->getEquinoxEquatorialPos(core);
+	}
+
+	pos.normalize();
+
+	return pos;
+}
+
+double NavStars::computeHorizontalParallax(StelObjectP selectedObject)
+{
+	QString name = selectedObject->getEnglishName();
+
+	double horizontalParallax = 0.;
+
+	if ("Moon" == name || "Venus" == name || "Mars" == name || "Jupiter" == name || "Saturn" == name)
+	{
+		QVariantMap map=selectedObject->getInfoMap(StelApp::getInstance().getCore());
+		double distance = map.value("distance").toDouble();			// in AU
+		horizontalParallax = std::asin(4.26352e-5/distance) * M_180_PIf * 60.f;	// 4.26352e-5 is Earth' radius in AU
+	}
+	return horizontalParallax;	// in arcmin
+}
+
+double NavStars::computeSemiDiameter(StelObjectP selectedObject, StelCore* core)
+{
+	// Note: For nautical applications only semi-diameter is required
+	QString name = selectedObject->getEnglishName();
+
+	double semiDiameter = 0.;
+	if ("Sun" == name || "Moon" == name)
+	{
+		semiDiameter = selectedObject->getAngularSize(core) * 60.f;
+	}
+	return semiDiameter;	// in arcmin
 }
 
 void NavStars::update(double deltaTime)
@@ -239,6 +398,7 @@ void NavStars::loadConfiguration(void)
 	setCurrentNavigationalStarsSetKey(conf->value("current_ns_set", "AngloAmerican").toString());
 	markerColor = StelUtils::strToVec3f(conf->value("marker_color", "0.8,0.0,0.0").toString());
 	enableAtStartup = conf->value("enable_at_startup", false).toBool();
+	enableShowOnScreen = conf->value("show_on_screen", false).toBool();
 
 	conf->endGroup();
 }
@@ -250,6 +410,7 @@ void NavStars::saveConfiguration(void)
 	conf->setValue("current_ns_set", getCurrentNavigationalStarsSetKey());
 	conf->setValue("marker_color", StelUtils::vec3fToStr(markerColor));
 	conf->setValue("enable_at_startup", enableAtStartup);
+	conf->setValue("show_on_screen", enableShowOnScreen);
 
 	conf->endGroup();
 }
@@ -288,6 +449,12 @@ QString NavStars::getCurrentNavigationalStarsSetDescription() const
 		{
 			// TRANSLATORS: The emphasis tags mark a book title.
 			txt = q_("The 81 stars that are listed in the <em>%1</em> published by the French Bureau des Longitudes.").arg("Ephémérides Nautiques");
+			break;
+		}
+		case German:
+		{
+			// TRANSLATORS: The emphasis tags mark a book title.
+			txt = q_("The 80 stars that are listed in the <em>%1</em> published by the Federal Maritime and Hydrographic Agency of Germany (%2).").arg("Nautisches Jahrbuch").arg("Bundesamt für Seeschifffahrt und Hydrographie");
 			break;
 		}
 		case Russian:
@@ -342,6 +509,25 @@ void NavStars::populateNavigationalStarsSet(void)
 				    <<  82396 <<  85927 <<  86032 <<  87833 <<  90185 <<  91262 <<  92855
 				    <<  97649 << 100453 << 100751 << 102098 << 105199 << 107315 << 109268
 				    << 112122 << 113368 << 113881 << 113963;
+			break;
+		}
+		case German:
+		{
+			// 80 stars from German Nautical Almanac
+			// Original German name: Nautisches Jahrbuch
+			// The numbers are identical to the "Nautisches Jahrbuch"
+			starNumbers <<    677 <<   1067 <<   2081 <<   3179 <<   3419 <<   4427 <<   5447
+				    <<   7588 <<  11767 <<   9640 <<   9884 <<  14135 <<  14576 <<  15863
+				    <<  17702 <<  21421 <<  24436 <<  24608 <<  25336 <<  25428 <<  26311
+				    <<  26727 <<  27366 <<  27989 <<  28360 <<  30324 <<  30438 <<  31681
+				    <<  32349 <<  33579 <<  34444 <<  36850 <<  37279 <<  37826 <<  41037
+				    <<  44816 <<  45238 <<  46390 <<  49669 <<  52419 <<  54061 <<  57632
+				    <<  60718 <<  61084 <<  62434 <<  62956 <<  63608 <<  65378 <<  65474
+				    <<  67301 <<  68702 <<  68933 <<  69673 <<  71683 <<  72105 <<  72622
+				    <<  72607 <<  74785 <<  76267 <<  77070 <<  80763 <<  82273 <<  82396
+				    <<  85927 <<  86032 <<  86228 <<  87833 <<  90185 <<  91262 <<  92855
+				    <<  97649 << 100751 << 102098 << 105199 << 107315 << 109268 << 112122
+				    << 113368 << 113881 << 113963;
 			break;
 		}
 		case Russian:

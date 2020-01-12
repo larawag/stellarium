@@ -35,7 +35,9 @@ class NavStarsWindow;
 /*! @defgroup navigationalStars Navigational Stars Plug-in
 @{
 The Navigational Stars plugin marks the 58 navigational stars of the
-Nautical Almanach and the 2102-D Rude Star Finder on the sky.
+Nautical Almanac and the 2102-D Rude Star Finder on the sky. Alternatively,
+the french, german, and russian selection of navigational stars are also
+available.
 
 The NavStars class is the main class of the plug-in. It manages the list of
 navigational stars and manipulate show/hide markers of them. All markers
@@ -68,8 +70,9 @@ public:
 	//! Available sets of navigational stars
 	enum NavigationalStarsSet
 	{
-		AngloAmerican,	//!< Anglo-American set (The Nautical Almanach)
+		AngloAmerican,	//!< Anglo-American set (The Nautical Almanac)
 		French,		//!< French set (Ephémérides Nautiques)
+		German,		//!< German set (Nautisches Jahrbuch)
 		Russian		//!< Russian set (Морской астрономический ежегодник)
 	};
 
@@ -110,6 +113,9 @@ public slots:
 	void setEnableAtStartup(bool b) { enableAtStartup=b; }
 	bool getEnableAtStartup(void) const { return enableAtStartup; }
 
+	void setEnableShowOnScreen(bool b) { enableShowOnScreen=b; }
+	bool getEnableShowOnScreen(void) const { return enableShowOnScreen; }
+
 	//! Set the set of navigational stars
 	void setCurrentNavigationalStarsSet(NavigationalStarsSet nsset)
 	{
@@ -139,11 +145,18 @@ private:
 	StelPropertyMgr* propMgr;
 	QSettings* conf;	
 
+	class SolarSystem* solarSystem;
+
 	// The current set of navigational stars
 	NavigationalStarsSet currentNSSet;
 
 	bool enableAtStartup;
 	bool starLabelsState;
+	bool enableShowOnScreen;
+
+	double computeHorizontalParallax(StelObjectP);
+	double computeSemiDiameter(StelObjectP selectedObject, StelCore* core);
+	Vec3d setEquitorialPos(StelCore *core, StelObjectP selectedObject);
 
 	//! List of the navigational stars' HIP numbers.
 	QList<int> starNumbers;
