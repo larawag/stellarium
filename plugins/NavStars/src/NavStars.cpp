@@ -205,7 +205,7 @@ void NavStars::draw(StelCore* core)
 	if (core->getCurrentLocation().planetName != "Earth")
 		return;
 
-	bool isEnabled = getEnableShowOnScreen();
+	bool isEnabled = true; //getEnableShowOnScreen();
 
 	if (isSource && isEnabled)	// (a object was chosen and information shall be shown)
 	{
@@ -215,20 +215,19 @@ void NavStars::draw(StelCore* core)
 
 		StelObjectP selectedObject = StelApp::getInstance().getStelObjectMgr().getSelectedObject()[0];
 
+
 		double dec, ra;
 		StelUtils::rectToSphe(&ra, &dec, setEquitorialPos(core, selectedObject));
 
 		Vec3d LocPos = selectedObject->getSiderealPosGeometric(core);
-		double lon = core->getCurrentLocation().longitude;	// in degrees
+		double lon = static_cast<double>(core->getCurrentLocation().longitude);
 
 		selectedObject->setExtraInfoString("<br/>");
 
-                QString value;
-
-		double sha = 2.*M_PI - ra;				// Sideral Hour Angle
-		double lha = - std::atan2(LocPos[1], LocPos[0]);	// Local Hour Angle
-		double gha = 2.*M_PI + (lha - lon * M_PI_180f);		// Greenwich Hour Angle
-		double gha0 = gha - sha;				// Greenwich Hour Angle of Vernal Equinox
+		double sha = fmod(2*M_PI - ra + 4*M_PI, 2*M_PI);				// Sideral Hour Angle,                     force to be in range 0...2pi
+		double lha = - fmod(std::atan2(LocPos[1], LocPos[0]) + 4*M_PI, 2*M_PI);		// Local Hour Angle,                       force to be in range 0...2pi
+		double gha = fmod(2*M_PI + (lha - lon * M_PI_180f) + 4*M_PI, 2*M_PI);		// Greenwich Hour Angle,                   force to be in range 0...2pi
+		double gha0 = fmod(gha - sha + 4*M_PI, 2*M_PI);					// Greenwich Hour Angle of Vernal Equinox, force to be in range 0...2pi
 
 		/* Notes:
 		 * The time and date of Greenwich is printed to screen here for convenience of the
@@ -315,6 +314,7 @@ Vec3d NavStars::setEquitorialPos(StelCore* core, StelObjectP selectedObject)
 
 	Vec3d pos;
 
+	J2000EquPos = false;
 	if (J2000EquPos)
 	{
 		pos = selectedObject->getJ2000EquatorialPos(core);
