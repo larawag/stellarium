@@ -1747,7 +1747,7 @@ void StelCore::addSiderealDays(double d)
 	setJD(getJD() + d);
 }
 
-// Get the sidereal time shifted by the observer longitude
+// Get the sidereal time of the prime meridian (i.e. Rotation Angle) shifted by the observer longitude
 double StelCore::getLocalSiderealTime() const
 {
 	// On Earth, this requires UT deliberately with all its faults, on other planets we use the more regular TT.
@@ -2463,7 +2463,7 @@ bool StelCore::isBrightDaylight() const
 		return false;
 	if (!getSkyDrawer()->getFlagHasAtmosphere())
 		return false;
-	if (ssys->getEclipseFactor(this)<=0.01) // Total solar eclipse
+	if (ssys->getEclipseFactor(this).first<=0.01) // Total solar eclipse
 		return false;
 
 	// immediately decide upon sky background brightness...

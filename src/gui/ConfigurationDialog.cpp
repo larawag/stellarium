@@ -320,7 +320,7 @@ void ConfigurationDialog::createDialogContent()
 	connectBoolProperty(ui->showDSSButtonCheckbox,			"StelGui.flagShowDSSButton");
 	connectBoolProperty(ui->showGotoSelectedButtonCheckBox,	"StelGui.flagShowGotoSelectedObjectButton");
 	connectBoolProperty(ui->showNightmodeButtonCheckBox,	"StelGui.flagShowNightmodeButton");
-	connectBoolProperty(ui->showFullscreenButtonCheckBox,	"StelGui.flagShowFullscreenButton");
+	connectBoolProperty(ui->showFullscreenButtonCheckBox,		"StelGui.flagShowFullscreenButton");
 
 	connectBoolProperty(ui->showConstellationBoundariesButtonCheckBox, "StelGui.flagShowConstellationBoundariesButton");
 	connectBoolProperty(ui->showAsterismLinesButtonCheckBox,	"StelGui.flagShowAsterismLinesButton");
@@ -334,6 +334,7 @@ void ConfigurationDialog::createDialogContent()
 	connectBoolProperty(ui->useButtonsBackgroundCheckBox,	"StelGui.flagUseButtonsBackground");
 	connectBoolProperty(ui->indicationMountModeCheckBox,		"StelMovementMgr.flagIndicationMountMode");
 	connectBoolProperty(ui->kineticScrollingCheckBox,			"StelGui.flagUseKineticScrolling");
+	connectBoolProperty(ui->focusOnDaySpinnerCheckBox,		"StelGui.flagEnableFocusOnDaySpinner");
 
 	// Font selection. We use a hidden, but documented entry in config.ini to optionally show a font selection option.
 	connectIntProperty(ui->screenFontSizeSpinBox, "StelApp.screenFontSize");
@@ -566,6 +567,8 @@ void ConfigurationDialog::setSelectedInfoFromCheckBoxes()
 		flags |= StelObject::Distance;
 	if (ui->checkBoxVelocity->isChecked())
 		flags |= StelObject::Velocity;
+	if (ui->checkBoxProperMotion->isChecked())
+		flags |= StelObject::ProperMotion;
 	if (ui->checkBoxSize->isChecked())
 		flags |= StelObject::Size;
 	if (ui->checkBoxExtra->isChecked())
@@ -574,6 +577,8 @@ void ConfigurationDialog::setSelectedInfoFromCheckBoxes()
 		flags |= StelObject::GalacticCoord;
 	if (ui->checkBoxSupergalacticCoordinates->isChecked())
 		flags |= StelObject::SupergalacticCoord;
+	if (ui->checkBoxOtherCoords->isChecked())
+		flags |= StelObject::OtherCoord;
 	if (ui->checkBoxType->isChecked())
 		flags |= StelObject::ObjectType;
 	if (ui->checkBoxEclipticCoordsJ2000->isChecked())
@@ -882,13 +887,15 @@ void ConfigurationDialog::saveAllSettings()
 		conf->setValue("flag_show_radecj2000",		static_cast<bool>(flags & StelObject::RaDecJ2000));
 		conf->setValue("flag_show_radecofdate",		static_cast<bool>(flags & StelObject::RaDecOfDate));
 		conf->setValue("flag_show_hourangle",		static_cast<bool>(flags & StelObject::HourAngle));
-		conf->setValue("flag_show_altaz",		static_cast<bool>(flags &  StelObject::AltAzi));
+		conf->setValue("flag_show_altaz",		static_cast<bool>(flags & StelObject::AltAzi));
 		conf->setValue("flag_show_distance",		static_cast<bool>(flags & StelObject::Distance));
 		conf->setValue("flag_show_velocity",		static_cast<bool>(flags & StelObject::Velocity));
+		conf->setValue("flag_show_propermotion",	static_cast<bool>(flags & StelObject::ProperMotion));
 		conf->setValue("flag_show_size",		static_cast<bool>(flags & StelObject::Size));
 		conf->setValue("flag_show_extra",		static_cast<bool>(flags & StelObject::Extra));
 		conf->setValue("flag_show_galcoord",		static_cast<bool>(flags & StelObject::GalacticCoord));
 		conf->setValue("flag_show_supergalcoord",	static_cast<bool>(flags & StelObject::SupergalacticCoord));
+		conf->setValue("flag_show_othercoord",		static_cast<bool>(flags & StelObject::OtherCoord));
 		conf->setValue("flag_show_type",		static_cast<bool>(flags & StelObject::ObjectType));
 		conf->setValue("flag_show_eclcoordofdate",	static_cast<bool>(flags & StelObject::EclipticCoordOfDate));
 		conf->setValue("flag_show_eclcoordj2000",	static_cast<bool>(flags & StelObject::EclipticCoordJ2000));
@@ -1491,10 +1498,12 @@ void ConfigurationDialog::updateSelectedInfoCheckBoxes()
 	ui->checkBoxAltAz->setChecked(flags & StelObject::AltAzi);
 	ui->checkBoxDistance->setChecked(flags & StelObject::Distance);
 	ui->checkBoxVelocity->setChecked(flags & StelObject::Velocity);
+	ui->checkBoxProperMotion->setChecked(flags & StelObject::ProperMotion);
 	ui->checkBoxSize->setChecked(flags & StelObject::Size);
 	ui->checkBoxExtra->setChecked(flags & StelObject::Extra);
 	ui->checkBoxGalacticCoordinates->setChecked(flags & StelObject::GalacticCoord);
 	ui->checkBoxSupergalacticCoordinates->setChecked(flags & StelObject::SupergalacticCoord);
+	ui->checkBoxOtherCoords->setChecked(flags & StelObject::OtherCoord);
 	ui->checkBoxType->setChecked(flags & StelObject::ObjectType);
 	ui->checkBoxEclipticCoordsJ2000->setChecked(flags & StelObject::EclipticCoordJ2000);
 	ui->checkBoxEclipticCoordsOfDate->setChecked(flags & StelObject::EclipticCoordOfDate);
@@ -1701,19 +1710,17 @@ void ConfigurationDialog::setTimeFormat()
 void ConfigurationDialog::populateDitherList()
 {
 	Q_ASSERT(ui->ditheringComboBox);
-
 	QComboBox* ditherCombo = ui->ditheringComboBox;
 
 	ditherCombo->blockSignals(true);
 	ditherCombo->clear();
-	ditherCombo->addItem(q_("None"),          "disabled"   );
-	ditherCombo->addItem(q_("5/6/5 bits"),    "color565"   );
-	ditherCombo->addItem(q_("6/6/6 bits"),    "color666"   );
-	ditherCombo->addItem(q_("8/8/8 bits"),    "color888"   );
+	ditherCombo->addItem(qc_("None","disabled"), "disabled");
+	ditherCombo->addItem(q_("5/6/5 bits"), "color565");
+	ditherCombo->addItem(q_("6/6/6 bits"), "color666");
+	ditherCombo->addItem(q_("8/8/8 bits"), "color888");
 	ditherCombo->addItem(q_("10/10/10 bits"), "color101010");
 
-	//show current setting
-
+	// show current setting
 	QSettings* conf = StelApp::getInstance().getSettings();
 	Q_ASSERT(conf);
 	QVariant selectedDitherFormat = conf->value("video/dithering_mode", "disabled");

@@ -50,7 +50,7 @@ public:
 	      const QString& texMapName,
 	      const QString& objModelName,
 	      posFuncType _coordFunc,
-	      void* orbitPtr,
+	      KeplerOrbit* orbitPtr,
 	      OsculatingFunctType *osculatingFunc,
 	      bool closeOrbit,
 	      bool hidden,
@@ -60,7 +60,7 @@ public:
 	      float dustTailBrightnessFact=1.5f
 	);
 
-	virtual ~Comet();
+	virtual ~Comet() Q_DECL_OVERRIDE;
 
 	//Inherited from StelObject via Planet
 	//! Get a string with data about the Comet.
@@ -75,24 +75,22 @@ public:
 	//! \param core the StelCore object
 	//! \param flags a set of InfoStringGroup items to include in the return value.
 	//! \return a QString containing an HMTL encoded description of the Comet.
-	virtual QString getInfoString(const StelCore *core, const InfoStringGroup &flags) const;
+	virtual QString getInfoString(const StelCore *core, const InfoStringGroup &flags) const Q_DECL_OVERRIDE;
 	//! In addition to Planet::getInfoMap(), Comets provides estimates for
 	//! - tail-length-km
 	//! - coma-diameter-km
 	//! using the formula from Guide found by the GSoC2012 initiative at http://www.projectpluto.com/update7b.htm#comet_tail_formula
-	virtual QVariantMap getInfoMap(const StelCore *core) const;
+	virtual QVariantMap getInfoMap(const StelCore *core) const Q_DECL_OVERRIDE;
 	//The Comet class inherits the "Planet" type because the SolarSystem class
 	//was not designed to handle different types of objects.
 	//virtual QString getType() const {return "Comet";}
 	//! \todo Find better sources for the g,k system
-	virtual float getVMagnitude(const StelCore* core) const;
+	virtual float getVMagnitude(const StelCore* core) const Q_DECL_OVERRIDE;
 	//! sets the nameI18 property with the appropriate translation.
 	//! Function overriden to handle the problem with name conflicts.
-	virtual void translateName(const StelTranslator& trans);
-	virtual QString getEnglishName(void) const {return englishName;}
-	virtual QString getNameI18n(void) const {return nameI18;}
-	QString getCommonEnglishName(void) const {return englishName;}
-	QString getCommonNameI18n(void) const {return nameI18;}
+	virtual void translateName(const StelTranslator& trans) Q_DECL_OVERRIDE;
+	virtual QString getEnglishName(void) const Q_DECL_OVERRIDE {return englishName;}
+	virtual QString getNameI18n(void) const Q_DECL_OVERRIDE {return nameI18;}
 
 	//! \brief sets absolute magnitude and slope parameter.
 	//! These are the parameters in the IAU's two-parameter magnitude system
@@ -101,17 +99,14 @@ public:
 	//! as the same parameters in MinorPlanet.
 	void setAbsoluteMagnitudeAndSlope(const float magnitude, const float slope);
 
-	//! set value for semi-major axis in AU
-	void setSemiMajorAxis(const double value);
-
-	//! get sidereal period for comet, days, or returns 0 if not possible (paraboloid, hyperboloid orbit)
-	virtual double getSiderealPeriod() const;
+	//! get sidereal period for comet, days, or returns 0 if not possible (parabolic, hyperbolic orbit)
+	virtual double getSiderealPeriod() const Q_DECL_OVERRIDE;
 
 	//! re-implementation of Planet's draw()
-	virtual void draw(StelCore* core, float maxMagLabels, const QFont& planetNameFont);
+	virtual void draw(StelCore* core, float maxMagLabels, const QFont& planetNameFont) Q_DECL_OVERRIDE;
 
 	// re-implementation of Planet's update() to prepare tails (extinction etc). @param deltaTime: ms (since last call)
-	virtual void update(int deltaTime);
+	virtual void update(int deltaTime) Q_DECL_OVERRIDE;
 
 private:
 	//! @returns estimates for (Coma diameter [AU], gas tail length [AU]).
@@ -137,7 +132,6 @@ private:
 	void computeParabola(const float parameter, const float topradius, const float zshift, QVector<Vec3d>& vertexArr, QVector<Vec2f>& texCoordArr, QVector<unsigned short>& indices, const float xOffset=0.0f);
 
 	float slopeParameter;
-	double semiMajorAxis;
 	bool isCometFragment;
 	bool nameIsProvisionalDesignation;
 
@@ -160,7 +154,7 @@ private:
 	float intensityMaxFov;
 
 
-	// These are to avoid having index arrays for each comet when all are equal.
+	// These are static to avoid having index arrays for each comet when all are equal.
 	static bool createTailIndices;
 	static bool createTailTextureCoords;
 

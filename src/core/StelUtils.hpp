@@ -84,6 +84,15 @@ namespace StelUtils
 	//! Return the user agent name, i.e. "Stellarium/0.15.0 (Linux)"
 	QString getUserAgentString();
 
+	inline const QString getEndLineChar() {
+		#ifdef Q_OS_WIN
+		const QString stelEndl="\r\n";
+		#else
+		const QString stelEndl="\n";
+		#endif
+		return stelEndl;
+	}
+
 	//! Convert hours, minutes, seconds to decimal hours
 	inline double hmsToHours(const unsigned int h, const unsigned int m, const double s){
 		return static_cast<double>(h)+static_cast<double>(m)/60.+s/3600.;
@@ -154,7 +163,7 @@ namespace StelUtils
 
 	//! Convert an angle in radian to a dms formatted string.
 	//! @param angle input angle in radian	
-	//! @param decimal output decimal second value
+	//! @param decimal output second value with decimal fraction
 	//! @param useD Define if letter "d" must be used instead of deg sign
 	QString radToDmsStr(const double angle, const bool decimal=false, const bool useD=false);
 
@@ -488,8 +497,8 @@ namespace StelUtils
 				1.f / (1.f -x*(1.f -x/2.f*(1.f- x/3.f*(1.f-x/4.f*(1.f-x/5.f)))));
 	}
 
-	//! Calculate and return sidereal period in days from semi-major axis (in AU)
-	double calculateSiderealPeriod(const double SemiMajorAxis);
+	// Calculate and return sidereal period in days from semi-major axis (in AU)
+	//double calculateSiderealPeriod(const double SemiMajorAxis);  MOVED TO Orbit.h
 
 	//! Convert decimal hours to hours, minutes, seconds
 	QString hoursToHmsStr(const double hours, const bool lowprecision = false);
@@ -803,7 +812,7 @@ namespace StelUtils
 		return (T(0) < val) - (val < T(0));
 	}
 	
-	//! Compute cosines and sines around a circle which is split in "segments" parts.
+	//! Compute cosines and sines around a circle which is split in "slices" parts.
 	//! Values are stored in the global static array cos_sin_theta.
 	//! Used for the sin/cos values along a latitude circle, equator, etc. for a spherical mesh.
 	//! @param slices number of partitions (elsewhere called "segments") for the circle
